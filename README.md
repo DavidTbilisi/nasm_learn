@@ -12,6 +12,14 @@ An interactive x86 assembly learning environment that runs entirely in the brows
 
 ---
 
+## Demo
+
+![Step-through debugger demo](screenshots/demo.gif)
+
+*Step through instructions one at a time — watch registers, flags, and the stack update live*
+
+---
+
 ## Features
 
 - **12 guided lessons** covering registers, arithmetic, flags, memory, the stack, loops, functions, strings, arrays, bitwise ops, and system calls
