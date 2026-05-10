@@ -29,6 +29,7 @@
     <button class="tab-btn">12 · Arrays</button>
     <button class="tab-btn quiz-tab">✎ Quiz</button>
     <button class="tab-btn gym-tab">🏋 Gym</button>
+    <button class="tab-btn playground-tab">▷ Playground</button>
   </div>
   <button id="theme-btn" class="btn btn-secondary theme-toggle" title="Switch theme">CYBER ◈</button>
 </header>
@@ -166,6 +167,51 @@
   </div>
 </div>
 
+<!-- ── Playground layout ─────────────────────────────────────────────────────── -->
+<div id="playground-wrap">
+
+  <!-- Left: state panels -->
+  <div id="pg-sidebar">
+    <div id="pg-sidebar-top">
+      <div class="state-header">Registers</div>
+      <div class="state-scroll"><table id="pg-reg-table"></table></div>
+    </div>
+    <div id="pg-sidebar-mid">
+      <div class="state-header">Flags</div>
+      <div id="pg-flag-bar"></div>
+      <div class="state-header">Stack / stdout</div>
+      <div class="state-scroll" id="pg-stack-panel"></div>
+    </div>
+  </div>
+
+  <!-- Right: editor + log -->
+  <div id="pg-main">
+    <div id="pg-toolbar">
+      <button id="pg-btn-run"   class="btn btn-primary">Run ▶</button>
+      <button id="pg-btn-step"  class="btn btn-secondary">Step ▶</button>
+      <button id="pg-btn-prev"  class="btn btn-secondary" disabled>◀ Prev</button>
+      <button id="pg-btn-reset" class="btn btn-secondary">Reset ↺</button>
+      <span id="pg-step-counter"></span>
+      <select id="pg-snippets" title="Load a snippet">
+        <option value="">── snippets ──</option>
+        <option value="arithmetic">Arithmetic</option>
+        <option value="loop">Counted Loop</option>
+        <option value="stack">Stack Frame</option>
+        <option value="fibonacci">Fibonacci</option>
+        <option value="bitwise">Bitwise Ops</option>
+        <option value="compare">Compare &amp; Branch</option>
+      </select>
+    </div>
+    <div id="pg-error-banner"></div>
+    <div id="pg-editor-host"></div>
+    <div id="pg-log-section">
+      <div class="state-header">Execution Log</div>
+      <div class="state-scroll" id="pg-step-log"></div>
+    </div>
+  </div>
+
+</div>
+
 <!-- ── Quiz layout ──────────────────────────────────────────────────────────── -->
 <div id="quiz-wrap">
   <div id="quiz-sidebar">
@@ -207,6 +253,7 @@
 <script src="app.js"></script>
 <script src="quiz.js"></script>
 <script src="gym.js"></script>
+<script src="playground.js"></script>
 <script src="resize.js"></script>
 <script src="theme.js"></script>
 </body>

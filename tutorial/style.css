@@ -2195,3 +2195,154 @@ body[data-theme="academic"] .gym-res-score span { color: var(--p-dim); }
 body[data-theme="academic"] .gym-res-pct   { color: var(--p); text-shadow: none; }
 body[data-theme="academic"] .gym-stat      { background: var(--surface); border-color: var(--border); }
 body[data-theme="academic"] .gym-stat span { color: var(--p); text-shadow: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PLAYGROUND
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+#playground-wrap {
+  display: none;
+  width: 100%;
+  height: calc(100vh - var(--header-h));
+  grid-template-columns: 280px 1fr;
+  overflow: hidden;
+}
+
+/* Sidebar: registers + flags + stack */
+#pg-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+#pg-sidebar-top {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+
+#pg-sidebar-top .state-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+#pg-sidebar-mid {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#pg-sidebar-mid #pg-stack-panel {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 6px 10px;
+}
+
+/* Main: toolbar + editor + log */
+#pg-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--screen);
+}
+
+#pg-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#pg-toolbar #pg-step-counter {
+  font-size: 12px;
+  color: var(--p-dim);
+  font-family: var(--mono);
+  margin-left: 4px;
+}
+
+#pg-snippets {
+  margin-left: auto;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--p-dim);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+}
+#pg-snippets:hover { border-color: var(--p-dim); color: var(--p); }
+
+#pg-error-banner {
+  display: none;
+  padding: 6px 12px;
+  background: var(--red-dim);
+  color: var(--red);
+  font-family: var(--mono);
+  font-size: 13px;
+  border-bottom: 1px solid var(--red-dim);
+  flex-shrink: 0;
+}
+
+#pg-editor-host {
+  flex: 1 1 auto;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#pg-editor-host .CodeMirror {
+  height: 100%;
+  background: var(--screen);
+  color: var(--p);
+  font-family: var(--mono);
+  font-size: var(--editor-font-size, 14px);
+}
+
+#pg-log-section {
+  flex: 0 0 auto;
+  max-height: 160px;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+#pg-log-section .state-header { flex-shrink: 0; }
+#pg-log-section .state-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 4px 10px 6px;
+}
+
+/* Playground tab active indicator */
+.tab-btn.playground-tab.active { color: var(--screen); background: var(--p); text-shadow: none; }
+
+/* ── Cyberpunk playground overrides ─────────────────────────────────────────── */
+body[data-theme="cyberpunk"] #pg-snippets {
+  background: var(--surface2);
+  border-color: var(--border-hi);
+  color: var(--p-dim);
+}
+body[data-theme="cyberpunk"] #pg-snippets:hover { border-color: var(--p); color: var(--p); }
+
+/* ── Academic playground overrides ──────────────────────────────────────────── */
+body[data-theme="academic"] #pg-sidebar  { background: var(--surface); border-right-color: var(--border); }
+body[data-theme="academic"] #pg-snippets {
+  background: var(--screen);
+  border-color: var(--border);
+  color: var(--p-dim);
+  border-radius: 3px;
+  font-size: 12px;
+}
+body[data-theme="academic"] #pg-snippets:hover { border-color: var(--amber); color: var(--amber); }
+body[data-theme="academic"] #pg-error-banner   { background: var(--red-dim); color: var(--red); }
+body[data-theme="academic"] #pg-editor-host .CodeMirror { background: var(--screen); color: var(--p); }
+body[data-theme="academic"] .tab-btn.playground-tab.active { background: var(--amber); color: #fff; border-color: var(--amber); }

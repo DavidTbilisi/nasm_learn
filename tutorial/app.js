@@ -296,18 +296,28 @@ tabBtns.forEach((btn, i) => {
   btn.addEventListener('click', () => {
     if (btn.classList.contains('gym-tab')) {
       window.hideQuiz?.();
+      window.hidePlayground?.();
       window.showGym?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
     }
     if (btn.classList.contains('quiz-tab')) {
       window.hideGym?.();
+      window.hidePlayground?.();
       window.showQuiz?.();
+      tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
+      return;
+    }
+    if (btn.classList.contains('playground-tab')) {
+      window.hideGym?.();
+      window.hideQuiz?.();
+      window.showPlayground?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
     }
     window.hideGym?.();
     window.hideQuiz?.();
+    window.hidePlayground?.();
     loadLesson(i);
   });
 });

@@ -50,9 +50,9 @@ test.describe('Page basics', () => {
     await expect(page.locator('.CodeMirror-code')).toContainText('mov eax, 42');
   });
 
-  test('all 14 tabs render (12 lessons + quiz + gym)', async ({ page }) => {
+  test('all 15 tabs render (12 lessons + quiz + gym + playground)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.tab-btn')).toHaveCount(14);
+    await expect(page.locator('.tab-btn')).toHaveCount(15);
   });
 });
 
