@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NASM Interactive Tutorial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>⚙ NASM Interactive Tutorial</h1>
+  <div class="tab-bar">
+    <button class="tab-btn active">1 · Registers</button>
+    <button class="tab-btn">2 · Arithmetic</button>
+    <button class="tab-btn">3 · Control Flow</button>
+    <button class="tab-btn">4 · Stack &amp; Calls</button>
+    <button class="tab-btn">5 · Loops</button>
+    <button class="tab-btn">6 · Syscalls</button>
+    <button class="tab-btn">7 · Strings</button>
+    <button class="tab-btn">8 · Bitwise</button>
+    <button class="tab-btn">9 · Addressing</button>
+    <button class="tab-btn">10 · Signed Math</button>
+    <button class="tab-btn">11 · Local Vars</button>
+    <button class="tab-btn">12 · Arrays</button>
+    <button class="tab-btn quiz-tab">✎ Quiz</button>
+    <button class="tab-btn gym-tab">🏋 Gym</button>
+  </div>
+</header>
+
+<!-- ── Tutorial layout ──────────────────────────────────────────────────────── -->
+<main id="main-layout">
+
+  <!-- Left: lesson content -->
+  <aside id="lesson-panel">
+    <div id="lesson-title"></div>
+    <p id="lesson-intro"></p>
+    <div>
+      <div class="section-label">Key Concepts</div>
+      <ul id="concepts-list"></ul>
+    </div>
+    <div>
+      <div class="section-label">Memory / Layout</div>
+      <pre id="diagram-pre"></pre>
+    </div>
+    <div class="exercise-card">
+      <div class="section-label">Exercise</div>
+      <p id="exercise-box"></p>
+      <button id="hint-btn">Show hint</button>
+      <p id="hint-box" style="display:none"></p>
+    </div>
+  </aside>
+
+  <!-- ① Drag handle — lesson width -->
+  <div class="resize-h" id="h-lesson" title="Drag to resize · Double-click to reset"></div>
+
+  <!-- Right: editor + state panels -->
+  <div id="right-panel">
+
+    <!-- Editor -->
+    <div id="editor-area">
+      <div id="editor-toolbar">
+        <button id="btn-run"   class="btn btn-primary">Run ▶</button>
+        <button id="btn-step"  class="btn btn-secondary">Step ▶</button>
+        <button id="btn-prev"  class="btn btn-secondary" disabled>◀ Prev</button>
+        <button id="btn-reset" class="btn btn-secondary">Reset ↺</button>
+        <span id="step-counter"></span>
+      </div>
+      <div id="error-banner"></div>
+      <div id="editor-host"></div>
+    </div>
+
+    <!-- ② Drag handle — editor height -->
+    <div class="resize-v" id="h-editor" title="Drag to resize · Double-click to reset"></div>
+
+    <!-- State panels -->
+    <div id="state-area">
+
+      <!-- Registers -->
+      <div class="state-section">
+        <div class="state-header">Registers</div>
+        <div class="state-scroll"><table id="reg-table"></table></div>
+      </div>
+
+      <!-- ③ Drag handle — register column width -->
+      <div class="resize-h" id="h-reg" title="Drag to resize · Double-click to reset"></div>
+
+      <!-- Flags + Stack -->
+      <div class="state-section">
+        <div class="state-header">Flags</div>
+        <div id="flag-bar"></div>
+        <div class="state-header">Stack / stdout</div>
+        <div class="state-scroll" id="stack-panel"></div>
+      </div>
+
+      <!-- ④ Drag handle — flags column width -->
+      <div class="resize-h" id="h-flags" title="Drag to resize · Double-click to reset"></div>
+
+      <!-- Execution log -->
+      <div class="state-section" id="log-section">
+        <div class="state-header">Execution Log</div>
+        <div class="state-scroll" id="step-log"></div>
+      </div>
+
+    </div><!-- #state-area -->
+  </div><!-- #right-panel -->
+
+</main>
+
+<!-- ── Gym layout ───────────────────────────────────────────────────────────── -->
+<div id="gym-wrap">
+
+  <!-- Left: session info (hidden on menu screen) -->
+  <div id="gym-sidebar">
+    <div id="gym-sidebar-header">
+      <button id="gym-back-btn" class="btn btn-secondary">← Back</button>
+      <div id="gym-sidebar-workout"></div>
+    </div>
+    <div>
+      <div class="gym-stat-label">Rep</div>
+      <div id="gym-rep-counter" class="gym-rep-num">— / —</div>
+    </div>
+    <div>
+      <div class="gym-stat-label">Streak</div>
+      <div id="gym-streak-display" class="gym-streak-val">0</div>
+    </div>
+  </div>
+
+  <!-- Right: menu → drill → results -->
+  <div id="gym-main">
+
+    <!-- Workout cards -->
+    <div id="gym-menu"></div>
+
+    <!-- Active drill -->
+    <div id="gym-drill-area" style="display:none">
+      <div id="gym-timer-wrap">
+        <div id="gym-timer-track"><div id="gym-timer-fill"></div></div>
+        <span id="gym-timer-label"></span>
+      </div>
+
+      <div id="gym-question-wrap">
+        <div id="gym-category-tag"></div>
+        <p  id="gym-question"></p>
+        <pre id="gym-drill-code" style="display:none"></pre>
+      </div>
+
+      <div id="gym-mc-area"   style="display:none"></div>
+      <div id="gym-type-area" style="display:none"></div>
+
+      <div id="gym-feedback" class="gym-feedback hidden"></div>
+
+      <div id="gym-nav">
+        <button id="gym-next-btn" class="btn btn-primary" style="display:none">Next →</button>
+      </div>
+    </div>
+
+    <!-- Session results -->
+    <div id="gym-results" style="display:none"></div>
+
+  </div>
+</div>
+
+<!-- ── Quiz layout ──────────────────────────────────────────────────────────── -->
+<div id="quiz-wrap">
+  <div id="quiz-sidebar">
+    <div id="quiz-meta">
+      <div id="quiz-lesson-tag"></div>
+      <div id="quiz-progress-n"></div>
+    </div>
+    <div class="quiz-progress-track"><div id="quiz-progress"></div></div>
+    <div id="quiz-score-live"></div>
+  </div>
+
+  <div id="quiz-main">
+    <div id="quiz-card">
+      <p id="quiz-q"></p>
+      <pre id="quiz-code" style="display:none"></pre>
+      <div id="quiz-opts"  style="display:none"></div>
+      <div id="quiz-input" style="display:none">
+        <label>EAX =</label>
+        <input type="text" placeholder="decimal or 0x hex" autocomplete="off" spellcheck="false">
+        <button id="quiz-check" class="btn btn-primary">Check</button>
+      </div>
+      <div id="quiz-feedback" class="quiz-feedback hidden">
+        <span class="fb-icon"></span>
+        <strong class="fb-label"></strong>
+        <p class="fb-explain"></p>
+      </div>
+      <div id="quiz-nav">
+        <button id="quiz-next" class="btn btn-primary" style="display:none">Next →</button>
+      </div>
+    </div>
+    <div id="quiz-results" style="display:none"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="simulator.js"></script>
+<script src="lessons.js"></script>
+<script src="nasm-mode.js"></script>
+<script src="app.js"></script>
+<script src="quiz.js"></script>
+<script src="gym.js"></script>
+<script src="resize.js"></script>
+</body>
+</html>

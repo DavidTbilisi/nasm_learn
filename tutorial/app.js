@@ -1,0 +1,323 @@
+'use strict';
+
+const sim = new NASMSimulator();
+let currentLesson = 0;
+let runResult = null;    // { history, instructions, finalState, ... }
+let stepIndex  = -1;     // -1 = before run, 0..n = history index
+let activeStepLine = -1; // CodeMirror line currently highlighted
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const cm           = window.cmEditor;   // CodeMirror instance from nasm-mode.js
+const btnRun       = document.getElementById('btn-run');
+const btnStep      = document.getElementById('btn-step');
+const btnPrev      = document.getElementById('btn-prev');
+const btnReset     = document.getElementById('btn-reset');
+const regTable     = document.getElementById('reg-table');
+const flagBar      = document.getElementById('flag-bar');
+const stackPanel   = document.getElementById('stack-panel');
+const stepLog      = document.getElementById('step-log');
+const lessonTitle  = document.getElementById('lesson-title');
+const lessonIntro  = document.getElementById('lesson-intro');
+const conceptsList = document.getElementById('concepts-list');
+const diagramPre   = document.getElementById('diagram-pre');
+const exerciseBox  = document.getElementById('exercise-box');
+const hintBox      = document.getElementById('hint-box');
+const hintBtn      = document.getElementById('hint-btn');
+const tabBtns      = document.querySelectorAll('.tab-btn');
+const stepCounter  = document.getElementById('step-counter');
+const errorBanner  = document.getElementById('error-banner');
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function hex(n) { return '0x' + (n >>> 0).toString(16).toUpperCase().padStart(8,'0'); }
+function hexShort(n) { return '0x' + (n >>> 0).toString(16).toUpperCase(); }
+
+function renderRegs(state, prevState) {
+  const REG_NAMES = ['eax','ebx','ecx','edx','esi','edi','esp','ebp'];
+  regTable.innerHTML = REG_NAMES.map(r => {
+    const val = state.regs[r];
+    const changed = prevState && prevState.regs[r] !== val;
+    return `<tr class="${changed ? 'changed' : ''}">
+      <td class="reg-name">${r.toUpperCase()}</td>
+      <td class="reg-hex">${hex(val)}</td>
+      <td class="reg-dec">${val >>> 0}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderFlags(state, prevState) {
+  flagBar.innerHTML = ['zf','cf','sf','of','df'].map(f => {
+    const val = state.flags[f];
+    const changed = prevState && prevState.flags[f] !== val;
+    return `<span class="flag ${val ? 'flag-set' : 'flag-clear'} ${changed ? 'changed' : ''}">
+      <span class="flag-name">${f.toUpperCase()}</span><span class="flag-val">${val}</span>
+    </span>`;
+  }).join('');
+}
+
+function renderStack(state) {
+  const stackEntries = [];
+  for (let a = 0x2000 - 4; a >= state.regs.esp && a >= 0; a -= 4) {
+    const v = (state.mem[a]??0) | ((state.mem[a+1]??0)<<8) |
+              ((state.mem[a+2]??0)<<16) | ((state.mem[a+3]??0)<<24);
+    if (v !== 0 || a === state.regs.esp) stackEntries.push([a, v>>>0]);
+  }
+
+  const stdoutLines = state.stdout ?? [];
+  let html = '';
+
+  if (stdoutLines.length) {
+    html += `<div class="stdout-label">stdout</div>`;
+    html += stdoutLines.map(l =>
+      `<div class="stdout-line">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'↵')}</div>`
+    ).join('');
+    if (state.exitCode !== null && state.exitCode !== undefined)
+      html += `<div class="stdout-exit">exit code: ${state.exitCode}</div>`;
+    html += '<hr class="stack-sep">';
+  }
+
+  if (!stackEntries.length) {
+    html += '<span class="empty-note">Stack is empty</span>';
+  } else {
+    html += stackEntries.map(([addr, val]) => {
+      const isEsp = addr === state.regs.esp;
+      const isEbp = addr === state.regs.ebp;
+      const label = isEsp ? ' ← ESP' : (isEbp ? ' ← EBP' : '');
+      return `<div class="stack-row${isEsp ? ' stack-top' : ''}">
+        <span class="stack-addr">${hexShort(addr)}</span>
+        <span class="stack-val">${hex(val)}</span>
+        <span class="stack-label">${label}</span>
+      </div>`;
+    }).join('');
+  }
+
+  stackPanel.innerHTML = html;
+}
+
+function renderState(state, prevState) {
+  renderRegs(state, prevState);
+  renderFlags(state, prevState);
+  renderStack(state);
+}
+
+// ── Line highlighting via CodeMirror API ──────────────────────────────────────
+
+function clearStepHighlight() {
+  if (activeStepLine >= 0) {
+    cm.removeLineClass(activeStepLine, 'background', 'cm-active-step');
+    activeStepLine = -1;
+  }
+}
+
+function highlightLine(ip, instructions) {
+  clearStepHighlight();
+  if (ip < 0 || !instructions || ip >= instructions.length) return;
+
+  const targetRaw = instructions[ip].raw.trim().toLowerCase();
+  const lineCount  = cm.lineCount();
+
+  for (let i = 0; i < lineCount; i++) {
+    let line = cm.getLine(i);
+    const ci = line.indexOf(';');
+    if (ci !== -1) line = line.slice(0, ci);
+    line = line.trim();
+    if (!line) continue;
+    if (line.includes(':')) line = line.slice(line.indexOf(':') + 1).trim();
+    if (!line) continue;
+    if (line.toLowerCase() === targetRaw) {
+      cm.addLineClass(i, 'background', 'cm-active-step');
+      cm.scrollIntoView({ line: i, ch: 0 }, 60);
+      activeStepLine = i;
+      return;
+    }
+  }
+}
+
+// ── Log helpers ───────────────────────────────────────────────────────────────
+
+function appendLog(msg, cls='') {
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + cls;
+  div.textContent = msg;
+  stepLog.appendChild(div);
+  stepLog.scrollTop = stepLog.scrollHeight;
+}
+
+function clearLog() { stepLog.innerHTML = ''; }
+function showError(msg) { errorBanner.textContent = msg; errorBanner.style.display = 'block'; }
+function hideError()     { errorBanner.style.display = 'none'; }
+
+function updateStepCounter() {
+  if (!runResult) { stepCounter.textContent = ''; return; }
+  const cur = stepIndex < 0 ? 0 : stepIndex + 1;
+  stepCounter.textContent = `Step ${cur} / ${runResult.history.length}`;
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+
+function doReset() {
+  runResult = null;
+  stepIndex = -1;
+  hideError();
+  clearLog();
+  clearStepHighlight();
+  stepCounter.textContent = '';
+  const blank = {
+    regs:  { eax:0,ebx:0,ecx:0,edx:0,esi:0,edi:0,esp:0x2000,ebp:0x2000 },
+    flags: { zf:0, cf:0, sf:0, of:0, df:0 },
+    mem:   {}, stdout: [], exitCode: null,
+  };
+  renderState(blank, null);
+  btnPrev.disabled = true;
+  btnStep.textContent = 'Step ▶';
+}
+
+function doRun() {
+  hideError();
+  clearLog();
+  runResult = sim.runAll(cm.getValue());
+
+  if (runResult.error) { showError(runResult.error); return; }
+  if (!runResult.history.length) { appendLog('No instructions executed.', 'log-warn'); return; }
+  if (runResult.hitLimit) appendLog('⚠ Execution stopped: step limit reached (possible infinite loop).', 'log-warn');
+
+  const lastStep = runResult.history[runResult.history.length - 1];
+  if (lastStep?.error) showError(`Error at "${lastStep.instr.raw}": ${lastStep.error}`);
+
+  const prev = runResult.history.length > 1 ? runResult.history[runResult.history.length-2].before : null;
+  renderState(runResult.finalState, prev);
+
+  appendLog(`Executed ${runResult.steps} instruction(s).`, 'log-info');
+  stepIndex = runResult.history.length - 1;
+  updateStepCounter();
+  clearStepHighlight();
+  btnPrev.disabled = false;
+  btnStep.textContent = 'Restart ↺';
+}
+
+function doStep() {
+  if (!runResult || stepIndex >= runResult.history.length - 1) {
+    hideError();
+    clearLog();
+    runResult = sim.runAll(cm.getValue());
+    if (runResult.error) { showError(runResult.error); runResult = null; return; }
+    if (!runResult.history.length) { appendLog('No instructions.', 'log-warn'); return; }
+    stepIndex = 0;
+  } else {
+    stepIndex++;
+  }
+
+  const entry    = runResult.history[stepIndex];
+  const prevEntry= stepIndex > 0 ? runResult.history[stepIndex-1] : null;
+  const dispState= stepIndex < runResult.history.length - 1 ? entry.before : runResult.finalState;
+
+  renderState(dispState, prevEntry ? prevEntry.before : null);
+  highlightLine(entry.before.ip, runResult.instructions);
+
+  let msg = `[${stepIndex+1}] ${entry.instr.raw}`;
+  if (entry.branch) msg += entry.branch.taken ? ` → taken (${entry.branch.target})` : ' → not taken';
+  if (entry.error)  msg += ` ✗ ${entry.error}`;
+  appendLog(msg, entry.error ? 'log-error' : '');
+
+  updateStepCounter();
+  btnPrev.disabled = stepIndex <= 0;
+  btnStep.textContent = stepIndex >= runResult.history.length - 1 ? 'Restart ↺' : 'Step ▶';
+
+  if (stepIndex >= runResult.history.length - 1) {
+    appendLog('— end of program —', 'log-info');
+    renderState(runResult.finalState, entry.before);
+    clearStepHighlight();
+  }
+}
+
+function doPrev() {
+  if (!runResult || stepIndex <= 0) return;
+  stepIndex--;
+  const entry    = runResult.history[stepIndex];
+  const prevEntry= stepIndex > 0 ? runResult.history[stepIndex-1] : null;
+  renderState(entry.before, prevEntry ? prevEntry.before : null);
+  highlightLine(entry.before.ip, runResult.instructions);
+  updateStepCounter();
+  btnPrev.disabled = stepIndex <= 0;
+  btnStep.textContent = 'Step ▶';
+  clearLog();
+  for (let i = 0; i <= stepIndex; i++) {
+    const e = runResult.history[i];
+    let msg = `[${i+1}] ${e.instr.raw}`;
+    if (e.branch) msg += e.branch.taken ? ` → taken (${e.branch.target})` : ' → not taken';
+    appendLog(msg, e.error ? 'log-error' : '');
+  }
+}
+
+btnRun.addEventListener('click', doRun);
+btnStep.addEventListener('click', () => {
+  if (runResult && stepIndex >= runResult.history.length - 1) doReset();
+  else doStep();
+});
+btnPrev.addEventListener('click', doPrev);
+btnReset.addEventListener('click', doReset);
+
+cm.on('change', () => {
+  runResult = null; stepIndex = -1;
+  clearStepHighlight();
+  stepCounter.textContent = '';
+  btnStep.textContent = 'Step ▶';
+});
+
+// ── Lesson rendering ──────────────────────────────────────────────────────────
+
+function loadLesson(idx) {
+  currentLesson = idx;
+  const lesson = LESSONS[idx];
+
+  tabBtns.forEach((b,i) => b.classList.toggle('active', i === idx));
+
+  lessonTitle.innerHTML = `<span class="lesson-num">${lesson.id}</span> ${lesson.title}`;
+  lessonIntro.textContent = lesson.intro;
+
+  conceptsList.innerHTML = lesson.concepts.map(c =>
+    `<li><strong>${c.name}</strong><span class="concept-desc">${c.desc}</span></li>`
+  ).join('');
+
+  diagramPre.textContent = lesson.diagram || '';
+  diagramPre.style.display = lesson.diagram ? 'block' : 'none';
+
+  exerciseBox.textContent = lesson.exercise.prompt;
+  hintBox.textContent     = lesson.exercise.hint;
+  hintBox.style.display   = 'none';
+  hintBtn.textContent     = 'Show hint';
+
+  cm.setValue(lesson.code.trim());
+  cm.clearHistory();
+  doReset();
+}
+
+tabBtns.forEach((btn, i) => {
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('gym-tab')) {
+      window.hideQuiz?.();
+      window.showGym?.();
+      tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
+      return;
+    }
+    if (btn.classList.contains('quiz-tab')) {
+      window.hideGym?.();
+      window.showQuiz?.();
+      tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
+      return;
+    }
+    window.hideGym?.();
+    window.hideQuiz?.();
+    loadLesson(i);
+  });
+});
+
+hintBtn.addEventListener('click', () => {
+  const visible = hintBox.style.display === 'block';
+  hintBox.style.display = visible ? 'none' : 'block';
+  hintBtn.textContent = visible ? 'Show hint' : 'Hide hint';
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadLesson(0);
+doReset();
