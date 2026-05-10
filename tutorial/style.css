@@ -1780,3 +1780,418 @@ body[data-theme="cyberpunk"] #quiz-input input:focus { border-color: var(--p); b
 
 /* Timer bar */
 body[data-theme="cyberpunk"] #gym-timer-fill { box-shadow: 0 0 8px rgba(0,229,255,0.8); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ACADEMIC THEME
+   Classical conservative — warm ivory, Lora serif, Oxford crimson, navy code.
+   Maximum readability for sustained study. Zero animation, zero glow.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+body[data-theme="academic"] {
+  /* Ivory paper palette */
+  --p:          #1c1a17;        /* deep warm black — primary text */
+  --p-hi:       #000000;
+  --p-dim:      #5a5650;        /* warm mid-gray */
+  --p-vdim:     #9a968e;        /* light warm gray */
+  --p-glow:     transparent;
+  --amber:      #8b1a1a;        /* Oxford crimson — accent */
+  --amber-dim:  rgba(139,26,26,0.07);
+  --red:        #b91c1c;
+  --red-dim:    rgba(185,28,28,0.07);
+  --screen:     #f8f5ee;        /* warm ivory — like quality paper */
+  --surface:    #f2efe6;
+  --surface2:   #eae7dd;
+  --surface3:   #e2dfd4;
+  --border:     #ccc8bc;
+  --border-hi:  #8b1a1a;        /* crimson highlight */
+  --glow-sm:    none;
+  --glow:       none;
+  --glow-lg:    none;
+  --font:       'Lora', Georgia, 'Times New Roman', serif;
+  --mono:       'Source Code Pro', 'Courier New', monospace;
+
+  font-size: 15px;
+  line-height: 1.75;            /* generous — textbook rhythm */
+  color: var(--p);
+  background: var(--screen);
+  background-image: none;
+  animation: none;
+  cursor: default;
+}
+
+/* Strip all CRT effects */
+body[data-theme="academic"]::before,
+body[data-theme="academic"]::after { display: none; }
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] header {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  height: 48px;
+}
+
+body[data-theme="academic"] header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--p);
+  text-shadow: none;
+  letter-spacing: 0.01em;
+  animation: none;
+}
+body[data-theme="academic"] header h1::after { display: none; }
+
+/* ── Tabs ──────────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] .tab-btn {
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  color: var(--p-dim);
+  border-right-color: var(--border);
+  height: 48px;
+}
+body[data-theme="academic"] .tab-btn:hover {
+  color: var(--p);
+  background: rgba(0,0,0,0.04);
+  text-shadow: none;
+}
+body[data-theme="academic"] .tab-btn.active {
+  color: var(--amber);
+  background: var(--amber-dim);
+  text-shadow: none;
+  border-bottom: 3px solid var(--amber);
+  box-shadow: none;
+  font-weight: 600;
+}
+body[data-theme="academic"] .tab-btn.quiz-tab.active {
+  color: var(--amber);
+  background: var(--amber-dim);
+  border-bottom-color: var(--amber);
+  text-shadow: none;
+  box-shadow: none;
+}
+body[data-theme="academic"] .tab-btn.gym-tab.active {
+  color: var(--amber);
+  background: var(--amber-dim);
+  border-bottom-color: var(--amber);
+  text-shadow: none;
+  box-shadow: none;
+}
+
+/* ── Theme button ──────────────────────────────────────────────────────────── */
+body[data-theme="academic"] #theme-btn {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  border-color: var(--border);
+  color: var(--p-dim);
+  clip-path: none;
+  border-radius: 3px;
+  text-transform: none;
+}
+body[data-theme="academic"] #theme-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--amber-dim);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] .btn {
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  clip-path: none;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+body[data-theme="academic"] .btn-primary {
+  background: var(--amber);
+  color: #fff;
+  border-color: var(--amber);
+  box-shadow: none;
+  text-shadow: none;
+}
+body[data-theme="academic"] .btn-primary:hover:not(:disabled) {
+  background: #6e1515;
+  border-color: #6e1515;
+  box-shadow: none;
+  color: #fff;
+  text-shadow: none;
+}
+body[data-theme="academic"] .btn-secondary { color: var(--p-dim); }
+body[data-theme="academic"] .btn-secondary:hover:not(:disabled) {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--amber-dim);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* ── Step counter / error banner ───────────────────────────────────────────── */
+body[data-theme="academic"] #step-counter { color: var(--p-dim); }
+body[data-theme="academic"] #error-banner { color: var(--red); background: var(--red-dim); border-bottom-color: rgba(185,28,28,0.2); }
+
+/* ── Lesson panel ──────────────────────────────────────────────────────────── */
+body[data-theme="academic"] #lesson-panel { background: var(--surface); border-right: 1px solid var(--border); }
+
+body[data-theme="academic"] #lesson-title {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--p);
+  text-shadow: none;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+body[data-theme="academic"] .lesson-num {
+  background: var(--amber);
+  color: #fff;
+  border-color: var(--amber);
+  box-shadow: none;
+  text-shadow: none;
+  font-size: 14px;
+  font-family: var(--mono);
+}
+
+body[data-theme="academic"] #lesson-intro {
+  color: var(--p-dim);
+  font-size: 15px;
+  border-left-color: var(--border);
+  font-style: italic;             /* serif italic reads beautifully for introductory text */
+}
+
+/* § section signs — the typographic convention for academic sections */
+body[data-theme="academic"] .section-label {
+  font-size: 11px;
+  color: var(--p-vdim);
+  letter-spacing: 0.14em;
+}
+body[data-theme="academic"] .section-label::before {
+  content: '§';
+  font-size: 13px;
+  color: var(--amber);
+}
+
+body[data-theme="academic"] #concepts-list li {
+  border-color: var(--border);
+  border-left: 3px solid var(--border-hi);
+  background: var(--screen);
+  font-size: 14px;
+}
+body[data-theme="academic"] #concepts-list li:hover {
+  border-left-color: #6e1515;
+  box-shadow: none;
+}
+body[data-theme="academic"] #concepts-list strong {
+  color: var(--amber);
+  text-shadow: none;
+  font-size: 13px;
+}
+body[data-theme="academic"] .concept-desc { font-size: 14px; }
+
+body[data-theme="academic"] #diagram-pre {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--p-dim);
+}
+
+body[data-theme="academic"] .exercise-card { background: var(--surface2); border-color: var(--border); border-top-color: var(--amber); }
+body[data-theme="academic"] .exercise-card::before { color: var(--p-vdim); background: var(--surface2); }
+body[data-theme="academic"] #exercise-box { font-size: 14px; color: var(--p-dim); }
+
+body[data-theme="academic"] #hint-btn { font-size: 13px; text-transform: none; }
+body[data-theme="academic"] #hint-btn:hover { color: var(--amber); border-color: var(--amber); text-shadow: none; }
+body[data-theme="academic"] #hint-box { color: var(--amber); text-shadow: none; font-size: 14px; }
+
+/* ── State panel headers ───────────────────────────────────────────────────── */
+body[data-theme="academic"] .state-header {
+  font-size: 11px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  color: var(--p-vdim);
+  letter-spacing: 0.14em;
+}
+body[data-theme="academic"] .state-header::before { color: var(--amber); }
+
+/* ── Registers ─────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] #reg-table tr { border-bottom-color: var(--border); }
+body[data-theme="academic"] #reg-table tr.changed { background: var(--amber-dim); }
+body[data-theme="academic"] #reg-table tr.changed .reg-name { color: var(--amber); text-shadow: none; }
+body[data-theme="academic"] #reg-table tr.changed .reg-hex  { color: var(--p); text-shadow: none; }
+body[data-theme="academic"] .reg-name { color: var(--amber); text-shadow: none; }
+body[data-theme="academic"] .reg-hex  { color: #1e3a5f; }   /* navy — like printed hex in textbooks */
+body[data-theme="academic"] .reg-dec  { color: var(--p-dim); }
+
+/* ── Flags ─────────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] .flag { border-color: var(--border); }
+body[data-theme="academic"] .flag-set {
+  color: var(--p);
+  background: var(--amber-dim);
+  border-color: rgba(139,26,26,0.3);
+  text-shadow: none;
+  box-shadow: none;
+}
+body[data-theme="academic"] .flag-clear { color: var(--p-vdim); }
+body[data-theme="academic"] .flag.changed { border-color: var(--amber); box-shadow: none; outline: none; }
+
+/* ── Stack ─────────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] .stack-row.stack-top { background: var(--amber-dim); border-left-color: var(--amber); }
+body[data-theme="academic"] .stack-val   { color: #1e3a5f; }
+body[data-theme="academic"] .stack-label { color: var(--amber); text-shadow: none; }
+body[data-theme="academic"] .stdout-line { color: var(--p); background: rgba(0,0,0,0.04); border-left-color: var(--border); }
+
+/* ── Log ───────────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] .log-entry         { color: var(--p-dim); }
+body[data-theme="academic"] .log-entry::before { color: var(--border-hi); }
+body[data-theme="academic"] .log-warn          { color: #7a5c08; background: rgba(122,92,8,0.08); }
+body[data-theme="academic"] .log-error         { color: var(--red); background: var(--red-dim); }
+
+/* ── Resize handles ────────────────────────────────────────────────────────── */
+body[data-theme="academic"] .resize-h:hover,     body[data-theme="academic"] .resize-h.dragging,
+body[data-theme="academic"] .resize-v:hover,     body[data-theme="academic"] .resize-v.dragging { background: rgba(0,0,0,0.03); }
+body[data-theme="academic"] .resize-h::after,    body[data-theme="academic"] .resize-v::after    { background: var(--border); }
+body[data-theme="academic"] .resize-h:hover::after, body[data-theme="academic"] .resize-h.dragging::after,
+body[data-theme="academic"] .resize-v:hover::after, body[data-theme="academic"] .resize-v.dragging::after { background: var(--amber); box-shadow: none; }
+
+/* ── CodeMirror — light academic ───────────────────────────────────────────── */
+body[data-theme="academic"] .cm-s-nasm-dark.CodeMirror {
+  background: #f5f2eb;
+  color: var(--p);
+  font-size: 13px;
+  line-height: 21px;
+}
+body[data-theme="academic"] .cm-s-nasm-dark .CodeMirror-gutters    { background: var(--surface2); border-right-color: var(--border); }
+body[data-theme="academic"] .cm-s-nasm-dark .CodeMirror-linenumber { color: var(--p-vdim); }
+body[data-theme="academic"] .cm-s-nasm-dark .CodeMirror-cursor     { border-left-color: var(--p); box-shadow: none; }
+body[data-theme="academic"] .cm-s-nasm-dark .CodeMirror-selected,
+body[data-theme="academic"] .cm-s-nasm-dark .CodeMirror-focused .CodeMirror-selected { background: rgba(139,26,26,0.1); }
+body[data-theme="academic"] .cm-s-nasm-dark .CodeMirror-matchingbracket { color: var(--amber) !important; font-weight: bold; }
+
+body[data-theme="academic"] .cm-s-nasm-dark .cm-comment    { color: #887e72; font-style: italic; }
+body[data-theme="academic"] .cm-s-nasm-dark .cm-string     { color: #2c6e49; }       /* forest green */
+body[data-theme="academic"] .cm-s-nasm-dark .cm-number,
+body[data-theme="academic"] .cm-s-nasm-dark .cm-atom       { color: #1e3a5f; }       /* navy */
+body[data-theme="academic"] .cm-s-nasm-dark .cm-keyword    { color: #1c1a17; font-weight: 600; text-shadow: none; }
+body[data-theme="academic"] .cm-s-nasm-dark .cm-variable-2 { color: var(--amber); text-shadow: none; }
+body[data-theme="academic"] .cm-s-nasm-dark .cm-def        { color: #1e3a5f; font-weight: 600; }
+body[data-theme="academic"] .cm-s-nasm-dark .cm-meta       { color: var(--p-dim); }
+body[data-theme="academic"] .cm-s-nasm-dark .cm-type       { color: #2c6e49; }
+body[data-theme="academic"] .cm-s-nasm-dark .cm-active-step {
+  background: rgba(139,26,26,0.07) !important;
+  border-left-color: var(--amber);
+  box-shadow: none;
+}
+
+/* ── Quiz ──────────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] #quiz-sidebar { background: var(--surface); border-right-color: var(--border); }
+body[data-theme="academic"] #quiz-progress-n { font-size: 28px; color: var(--p); text-shadow: none; }
+body[data-theme="academic"] .quiz-progress-track { background: var(--surface3); border-color: var(--border); }
+body[data-theme="academic"] #quiz-progress { background: var(--amber); box-shadow: none; }
+body[data-theme="academic"] #quiz-q { font-size: 17px; font-weight: 600; text-shadow: none; }
+body[data-theme="academic"] #quiz-code { background: var(--surface2); border-color: var(--border); color: var(--p); }
+body[data-theme="academic"] .quiz-opt {
+  font-family: var(--font);
+  font-size: 15px;
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--p);
+  border-radius: 3px;
+}
+body[data-theme="academic"] .quiz-opt:hover:not(:disabled) {
+  border-color: var(--amber);
+  background: var(--amber-dim);
+  color: var(--p);
+  text-shadow: none;
+}
+body[data-theme="academic"] .quiz-opt.opt-correct { border-color: #2c6e49; background: rgba(44,110,73,0.08); color: #1d5236; }
+body[data-theme="academic"] .quiz-opt.opt-wrong   { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+body[data-theme="academic"] #quiz-input label     { color: var(--amber); text-shadow: none; }
+body[data-theme="academic"] #quiz-input input {
+  background: var(--screen);
+  border-color: var(--border);
+  color: var(--p);
+  caret-color: var(--p);
+  border-radius: 3px;
+}
+body[data-theme="academic"] #quiz-input input:focus { border-color: var(--amber); box-shadow: none; }
+body[data-theme="academic"] .quiz-feedback { font-family: var(--font); font-size: 15px; }
+body[data-theme="academic"] .quiz-feedback.correct { background: rgba(44,110,73,0.07); border-color: rgba(44,110,73,0.28); color: #1d5236; }
+body[data-theme="academic"] .quiz-feedback.wrong   { background: var(--red-dim); border-color: rgba(185,28,28,0.25); color: var(--red); }
+body[data-theme="academic"] .result-score { color: var(--amber); text-shadow: none; font-family: var(--mono); }
+body[data-theme="academic"] .result-score span { color: var(--p-dim); }
+body[data-theme="academic"] .result-pct { color: var(--p); }
+body[data-theme="academic"] .result-row { border-color: var(--border); background: var(--surface); }
+body[data-theme="academic"] .result-row.row-ok  .row-icon { color: #2c6e49; }
+body[data-theme="academic"] .result-row.row-bad .row-icon { color: var(--red); }
+
+/* ── Gym ───────────────────────────────────────────────────────────────────── */
+body[data-theme="academic"] #gym-sidebar { background: var(--surface); border-right-color: var(--border); }
+body[data-theme="academic"] #gym-sidebar-workout { font-size: 15px; color: var(--p); text-shadow: none; letter-spacing: 0; text-transform: none; }
+body[data-theme="academic"] .gym-stat-label { color: var(--p-vdim); }
+body[data-theme="academic"] .gym-rep-num   { font-size: 26px; color: var(--p); text-shadow: none; }
+body[data-theme="academic"] .gym-streak-val { font-size: 34px; color: var(--amber); text-shadow: none; }
+body[data-theme="academic"] .gym-streak-val.heating { color: #7a5c08; text-shadow: none; }
+body[data-theme="academic"] .gym-streak-val.on-fire { color: var(--red); text-shadow: none; animation: none; }
+
+body[data-theme="academic"] .gym-card {
+  clip-path: none;
+  border-radius: 4px;
+  background: var(--surface);
+  border-color: var(--border);
+}
+body[data-theme="academic"] .gym-card:hover {
+  border-color: var(--amber);
+  background: var(--surface2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  animation: none;
+  transform: none;
+}
+body[data-theme="academic"] .gym-card:hover::before { background: var(--amber); box-shadow: none; }
+body[data-theme="academic"] .gym-card-name { font-size: 15px; text-transform: none; letter-spacing: 0; text-shadow: none; color: var(--p); font-weight: 600; }
+body[data-theme="academic"] .gym-card-desc { font-size: 13px; color: var(--p-dim); }
+
+body[data-theme="academic"] #gym-timer-track { background: var(--surface3); border-color: var(--border); }
+body[data-theme="academic"] #gym-timer-fill  { background: var(--amber); box-shadow: none; }
+body[data-theme="academic"] #gym-category-tag { color: var(--p-vdim); letter-spacing: 0.1em; }
+body[data-theme="academic"] #gym-question   { font-size: 19px; color: var(--p); text-shadow: none; }
+body[data-theme="academic"] #gym-question code { color: var(--amber); text-shadow: none; background: var(--surface2); }
+body[data-theme="academic"] #gym-drill-code { background: var(--surface2); border-color: var(--border); color: var(--p); }
+
+body[data-theme="academic"] .gym-opt {
+  font-family: var(--font);
+  font-size: 15px;
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--p);
+  border-radius: 3px;
+}
+body[data-theme="academic"] .gym-opt:hover:not(:disabled) {
+  border-color: var(--amber);
+  background: var(--amber-dim);
+  color: var(--p);
+  text-shadow: none;
+}
+body[data-theme="academic"] .gym-opt.gym-opt-correct { border-color: #2c6e49; background: rgba(44,110,73,0.08); color: #1d5236; }
+body[data-theme="academic"] .gym-opt.gym-opt-wrong   { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+body[data-theme="academic"] .gym-key { border-color: var(--border); color: var(--p-dim); }
+body[data-theme="academic"] .gym-type-label { color: var(--amber); text-shadow: none; font-size: 15px; }
+body[data-theme="academic"] .gym-type-inp {
+  background: var(--screen);
+  border-color: var(--border);
+  color: var(--p);
+  border-radius: 3px;
+  font-size: 15px;
+  caret-color: var(--p);
+}
+body[data-theme="academic"] .gym-type-inp:focus         { border-color: var(--amber); box-shadow: none; }
+body[data-theme="academic"] .gym-type-inp.gym-inp-correct { background: rgba(44,110,73,0.07); border-color: #2c6e49; }
+
+body[data-theme="academic"] .gym-feedback { font-family: var(--font); font-size: 15px; }
+body[data-theme="academic"] .gym-feedback.correct { background: rgba(44,110,73,0.07); border-color: rgba(44,110,73,0.28); color: #1d5236; }
+body[data-theme="academic"] .gym-feedback.wrong   { background: var(--red-dim); border-color: rgba(185,28,28,0.25); color: var(--red); }
+
+body[data-theme="academic"] .gym-res-score { font-size: 80px; color: var(--amber); text-shadow: none; font-family: var(--mono); }
+body[data-theme="academic"] .gym-res-score span { color: var(--p-dim); }
+body[data-theme="academic"] .gym-res-pct   { color: var(--p); text-shadow: none; }
+body[data-theme="academic"] .gym-stat      { background: var(--surface); border-color: var(--border); }
+body[data-theme="academic"] .gym-stat span { color: var(--p); text-shadow: none; }
