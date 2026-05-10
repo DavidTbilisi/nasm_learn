@@ -1469,3 +1469,314 @@ header h1::after {
 
 /* Gym tab */
 .tab-btn.gym-tab.active { color: var(--screen); background: var(--p); text-shadow: none; }
+
+/* Theme toggle button */
+#theme-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 15px;
+  white-space: nowrap;
+  letter-spacing: 0.08em;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CYBERPUNK THEME
+   Neon noir — deep purple-black city, cyan + hot-pink neons, chromatic glitch
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes cyber-glitch {
+  0%, 85%, 100% { text-shadow: var(--glow); transform: none; }
+  86% { text-shadow: 2px 0 var(--amber), -2px 0 var(--p), 0 0 12px var(--p-glow); transform: translate(-2px, 0); }
+  87% { text-shadow: -2px 0 var(--amber),  2px 0 var(--p), 0 0 12px var(--p-glow); transform: translate(2px, 0); }
+  88% { text-shadow: var(--glow); transform: none; }
+  93% { text-shadow: 1px 0 var(--amber), -1px 0 var(--p), 0 0 10px var(--p-glow); }
+  94% { text-shadow: var(--glow); }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,229,255,0.2),  inset 0 0 20px rgba(0,229,255,0.03); }
+  50%       { box-shadow: 0 0 14px rgba(0,229,255,0.4), inset 0 0 28px rgba(0,229,255,0.06); }
+}
+
+/* ── Variable overrides ────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] {
+  --p:          #00e5ff;
+  --p-hi:       #80f2ff;
+  --p-dim:      #006677;
+  --p-vdim:     #003344;
+  --p-glow:     rgba(0,229,255,0.6);
+  --amber:      #ff2d78;
+  --amber-dim:  rgba(255,45,120,0.15);
+  --red:        #ff4455;
+  --red-dim:    rgba(255,68,85,0.15);
+  --screen:     #070010;
+  --surface:    #0c0018;
+  --surface2:   #110022;
+  --surface3:   #180030;
+  --border:     #280048;
+  --border-hi:  #5500aa;
+  --glow-sm:    0 0 8px rgba(0,229,255,0.65);
+  --glow:       0 0 10px rgba(0,229,255,0.6), 0 0 22px rgba(0,229,255,0.28), 0 0 1px rgba(255,45,120,0.35);
+  --glow-lg:    0 0 12px rgba(0,229,255,0.7), 0 0 30px rgba(0,229,255,0.32), 0 0 60px rgba(0,229,255,0.14), 0 0 2px rgba(255,45,120,0.5);
+  --font:       'Orbitron', 'Share Tech Mono', monospace;
+  --mono:       'Share Tech Mono', monospace;
+
+  /* Orbitron is wider — scale down base size */
+  font-size: 13px;
+
+  /* Holographic grid background */
+  background-color: var(--screen);
+  background-image:
+    linear-gradient(rgba(0,229,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+
+  /* No flicker in cyberpunk */
+  animation: warmup 0.8s ease-out both;
+}
+
+/* Cyberpunk scanlines — blue-tinted, looser */
+body[data-theme="cyberpunk"]::after {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 3px,
+    rgba(0, 0, 24, 0.12) 3px, rgba(0, 0, 24, 0.12) 4px
+  );
+}
+
+/* Cyberpunk vignette — purple corners */
+body[data-theme="cyberpunk"]::before {
+  background: radial-gradient(ellipse 100% 100% at 50% 50%,
+    transparent 42%,
+    rgba(24, 0, 48, 0.48) 80%,
+    rgba(10, 0, 24, 0.68) 100%
+  );
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] header {
+  border-bottom-color: var(--border-hi);
+  box-shadow: 0 1px 0 rgba(0,229,255,0.08), 0 2px 16px rgba(0,0,24,0.6);
+}
+
+body[data-theme="cyberpunk"] header h1 {
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  animation: cyber-glitch 7s ease-in-out infinite;
+}
+
+/* Swap blinking block cursor → magenta underscore in cyberpunk */
+body[data-theme="cyberpunk"] header h1::after {
+  content: '_';
+  color: var(--amber);
+  text-shadow: 0 0 10px rgba(255,45,120,0.8);
+  animation: blink 0.7s step-end infinite;
+  font-size: 16px;
+  margin-left: 3px;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .tab-btn {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  border-right-color: var(--border);
+}
+body[data-theme="cyberpunk"] .tab-btn:hover {
+  background: rgba(0,229,255,0.06);
+  text-shadow: var(--glow-sm);
+}
+body[data-theme="cyberpunk"] .tab-btn.active {
+  color: var(--p);
+  background: rgba(0,229,255,0.10);
+  text-shadow: var(--glow-sm);
+  border-bottom: 2px solid var(--p);
+  box-shadow: 0 2px 8px rgba(0,229,255,0.25);
+}
+body[data-theme="cyberpunk"] .tab-btn.quiz-tab.active {
+  color: var(--amber);
+  background: rgba(255,45,120,0.10);
+  border-bottom-color: var(--amber);
+  box-shadow: 0 2px 8px rgba(255,45,120,0.3);
+  text-shadow: 0 0 8px rgba(255,45,120,0.6);
+}
+body[data-theme="cyberpunk"] .tab-btn.gym-tab.active {
+  color: var(--p);
+  background: rgba(0,229,255,0.10);
+  text-shadow: var(--glow-sm);
+  border-bottom-color: var(--p);
+}
+
+/* ── Theme button in cyberpunk ─────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] #theme-btn {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  border-color: var(--amber);
+  color: var(--amber);
+  text-shadow: 0 0 8px rgba(255,45,120,0.55);
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+}
+body[data-theme="cyberpunk"] #theme-btn:hover {
+  background: rgba(255,45,120,0.10);
+  box-shadow: 0 0 12px rgba(255,45,120,0.4);
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+/* ── Buttons — angled corners ──────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .btn {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+  border-radius: 0;
+}
+body[data-theme="cyberpunk"] .btn-primary {
+  background: var(--amber);
+  color: #06000e;
+  border-color: var(--amber);
+  box-shadow: 0 0 14px rgba(255,45,120,0.65), 0 0 28px rgba(255,45,120,0.28);
+  text-shadow: none;
+}
+body[data-theme="cyberpunk"] .btn-primary:hover:not(:disabled) {
+  background: #ff5599;
+  border-color: #ff5599;
+  box-shadow: 0 0 18px rgba(255,45,120,0.85), 0 0 36px rgba(255,45,120,0.38);
+  color: #06000e;
+  text-shadow: none;
+}
+body[data-theme="cyberpunk"] .btn-secondary:hover:not(:disabled) {
+  border-color: var(--p);
+  color: var(--p);
+  background: rgba(0,229,255,0.08);
+  box-shadow: var(--glow-sm);
+}
+
+/* ── Section label icon ────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .section-label::before {
+  content: '//';
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* ── Lesson panel text sizes ───────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] #lesson-title    { font-size: 15px; letter-spacing: 0.12em; }
+body[data-theme="cyberpunk"] .lesson-num      { font-size: 13px; min-width: 28px; }
+body[data-theme="cyberpunk"] #lesson-intro    { font-size: 13px; }
+body[data-theme="cyberpunk"] #concepts-list li  { font-size: 13px; }
+body[data-theme="cyberpunk"] .concept-desc    { font-size: 12px; }
+body[data-theme="cyberpunk"] .section-label   { font-size: 11px; }
+body[data-theme="cyberpunk"] #exercise-box    { font-size: 13px; }
+body[data-theme="cyberpunk"] #hint-btn        { font-size: 12px; letter-spacing: 0.1em; clip-path: none; }
+body[data-theme="cyberpunk"] #hint-box        { font-size: 13px; }
+body[data-theme="cyberpunk"] .exercise-card::before { font-size: 10px; letter-spacing: 0.14em; }
+
+/* ── Concepts: amber is now magenta ────────────────────────────────────────── */
+body[data-theme="cyberpunk"] #concepts-list strong {
+  text-shadow: 0 0 8px rgba(255,45,120,0.55);
+}
+
+/* ── State headers ─────────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .state-header    { font-size: 11px; letter-spacing: 0.16em; }
+
+/* ── Registers: changed rows use magenta shadow ────────────────────────────── */
+body[data-theme="cyberpunk"] #reg-table tr.changed .reg-name {
+  text-shadow: 0 0 8px rgba(255,45,120,0.6);
+}
+body[data-theme="cyberpunk"] .reg-name {
+  text-shadow: 0 0 6px rgba(255,45,120,0.4);
+}
+
+/* ── Flags ─────────────────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .flag-set {
+  background: rgba(0,229,255,0.07);
+  border-color: rgba(0,229,255,0.4);
+}
+
+/* ── Stack ─────────────────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .stack-row.stack-top { background: rgba(0,229,255,0.07); }
+body[data-theme="cyberpunk"] .stdout-line { background: rgba(0,229,255,0.06); border-left-color: var(--border-hi); }
+
+/* ── Log ───────────────────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .log-entry::before { color: var(--p-dim); }
+
+/* ── CodeMirror retro → cyberpunk ──────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .cm-s-nasm-dark.CodeMirror      { background: #050010; }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .CodeMirror-gutters { background: #090018; border-right-color: var(--border); }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .CodeMirror-linenumber { color: var(--p-vdim); }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .CodeMirror-cursor { border-left-color: var(--amber); box-shadow: 0 0 10px rgba(255,45,120,0.7); }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .CodeMirror-selected,
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .CodeMirror-focused .CodeMirror-selected { background: rgba(0,229,255,0.12); }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .CodeMirror-matchingbracket { color: var(--p) !important; }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-comment     { color: #3a1660; }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-string      { color: #7799ff; }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-number,
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-atom        { color: #bb77ff; }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-keyword     { color: var(--p); text-shadow: var(--glow-sm); }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-variable-2  { color: var(--amber); text-shadow: 0 0 6px rgba(255,45,120,0.5); }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-def         { color: #ff88bb; }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-meta        { color: #6633aa; }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-type        { color: #44aaff; }
+body[data-theme="cyberpunk"] .cm-s-nasm-dark .cm-active-step {
+  background: rgba(0,229,255,0.09) !important;
+  border-left-color: var(--p);
+  box-shadow: inset 0 0 24px rgba(0,229,255,0.06), inset 3px 0 16px rgba(255,45,120,0.04);
+}
+
+/* ── Resize handles — cyan glow ────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .resize-h:hover::after,
+body[data-theme="cyberpunk"] .resize-h.dragging::after,
+body[data-theme="cyberpunk"] .resize-v:hover::after,
+body[data-theme="cyberpunk"] .resize-v.dragging::after { background: var(--p); box-shadow: var(--glow-sm); }
+
+/* ── Quiz text sizes ───────────────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] #quiz-q           { font-size: 16px; }
+body[data-theme="cyberpunk"] .quiz-opt         { font-size: 13px; letter-spacing: 0.05em; }
+body[data-theme="cyberpunk"] .quiz-feedback    { font-size: 13px; }
+body[data-theme="cyberpunk"] .fb-label         { font-size: 13px; }
+body[data-theme="cyberpunk"] .fb-explain       { font-size: 12px; }
+body[data-theme="cyberpunk"] #quiz-progress-n  { font-size: 28px; }
+body[data-theme="cyberpunk"] .quiz-opt.opt-correct { background: rgba(0,229,255,0.09); border-color: var(--p); }
+body[data-theme="cyberpunk"] .quiz-feedback.correct { background: rgba(0,229,255,0.07); border-color: rgba(0,229,255,0.3); }
+body[data-theme="cyberpunk"] .result-score     { font-size: 72px; }
+
+/* ── Gym text sizes & effects ──────────────────────────────────────────────── */
+body[data-theme="cyberpunk"] .gym-card-name    { font-size: 13px; letter-spacing: 0.12em; }
+body[data-theme="cyberpunk"] .gym-card-desc    { font-size: 12px; }
+body[data-theme="cyberpunk"] .gym-card-meta    { font-size: 11px; }
+body[data-theme="cyberpunk"] #gym-sidebar-workout { font-size: 13px; letter-spacing: 0.12em; }
+body[data-theme="cyberpunk"] .gym-stat-label   { font-size: 11px; }
+body[data-theme="cyberpunk"] .gym-rep-num      { font-size: 24px; }
+body[data-theme="cyberpunk"] .gym-streak-val   { font-size: 36px; }
+body[data-theme="cyberpunk"] #gym-category-tag { font-size: 11px; letter-spacing: 0.18em; }
+body[data-theme="cyberpunk"] #gym-question     { font-size: 18px; }
+body[data-theme="cyberpunk"] .gym-opt          { font-size: 13px; letter-spacing: 0.05em; }
+body[data-theme="cyberpunk"] .gym-type-label   { font-size: 14px; }
+body[data-theme="cyberpunk"] .gym-type-inp     { font-size: 14px; }
+body[data-theme="cyberpunk"] .gym-feedback     { font-size: 13px; }
+body[data-theme="cyberpunk"] .gym-res-score    { font-size: 72px; }
+body[data-theme="cyberpunk"] .gym-res-pct      { font-size: 18px; }
+body[data-theme="cyberpunk"] .gym-stat span    { font-size: 22px; }
+
+/* Gym card hover — neon pulse instead of simple shadow */
+body[data-theme="cyberpunk"] .gym-card {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+body[data-theme="cyberpunk"] .gym-card:hover {
+  border-color: var(--p);
+  transform: none;
+  animation: neon-pulse 1.8s ease-in-out infinite;
+  box-shadow: none;
+}
+body[data-theme="cyberpunk"] .gym-card:hover::before { box-shadow: 0 0 10px rgba(0,229,255,0.8); }
+
+/* MC options — cyan correct, magenta wrong */
+body[data-theme="cyberpunk"] .gym-opt.gym-opt-correct { background: rgba(0,229,255,0.09); border-color: var(--p); }
+body[data-theme="cyberpunk"] .gym-feedback.correct    { background: rgba(0,229,255,0.07); border-color: rgba(0,229,255,0.3); }
+
+/* Inputs */
+body[data-theme="cyberpunk"] .gym-type-inp:focus { border-color: var(--p); box-shadow: var(--glow-sm); }
+body[data-theme="cyberpunk"] .gym-type-inp.gym-inp-correct { background: rgba(0,229,255,0.06); border-color: var(--p); }
+body[data-theme="cyberpunk"] #quiz-input input:focus { border-color: var(--p); box-shadow: var(--glow-sm); }
+
+/* Timer bar */
+body[data-theme="cyberpunk"] #gym-timer-fill { box-shadow: 0 0 8px rgba(0,229,255,0.8); }

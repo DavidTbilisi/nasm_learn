@@ -6,11 +6,11 @@
   <title>NASM Interactive Tutorial</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-theme="retro">
 
 <header>
   <h1>⚙ NASM Interactive Tutorial</h1>
@@ -30,6 +30,7 @@
     <button class="tab-btn quiz-tab">✎ Quiz</button>
     <button class="tab-btn gym-tab">🏋 Gym</button>
   </div>
+  <button id="theme-btn" class="btn btn-secondary theme-toggle" title="Switch theme">CYBER ◈</button>
 </header>
 
 <!-- ── Tutorial layout ──────────────────────────────────────────────────────── -->
@@ -207,5 +208,6 @@
 <script src="quiz.js"></script>
 <script src="gym.js"></script>
 <script src="resize.js"></script>
+<script src="theme.js"></script>
 </body>
 </html>
