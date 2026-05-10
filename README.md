@@ -4,24 +4,56 @@ An interactive x86 assembly learning environment that runs entirely in the brows
 
 **[Live demo →](https://davidtbilisi.github.io/nasm_learn/)**
 
-## Live Tutorial
+---
 
-Open `tutorial/index.html` in any modern browser (or serve the directory):
+![Retro lesson view](screenshots/retro-lesson.png)
+
+*Phosphor-green retro terminal — guided lesson with live register/flag/stack state*
+
+---
+
+## Features
+
+- **12 guided lessons** covering registers, arithmetic, flags, memory, the stack, loops, functions, strings, arrays, bitwise ops, and system calls
+- **Step-by-step debugger** — run, step forward/backward through instructions, see registers, flags, and stack update live
+- **Playground** — free-form editor to write and debug any assembly you like, with 6 built-in snippets and auto-save
+- **Quiz mode** — multiple-choice and type-in questions with instant feedback and a progress bar
+- **Gym mode** — timed drill workouts across 7 topic categories to build fluency under pressure
+- **3 themes** — Retro (phosphor green CRT), Cyberpunk (neon-noir), Academic (warm ivory, maximum readability)
+- **Resizable panels** — drag handles to reflow the layout; double-click any handle to reset; persists via `localStorage`
+- **CodeMirror editor** with NASM syntax highlighting
+
+## Screenshots
+
+### Debugger — step through instructions
+
+![Retro debugger](screenshots/retro-debugger.png)
+
+### Playground — write freely, run anything
+
+![Playground](screenshots/playground.png)
+
+### Quiz mode
+
+![Quiz](screenshots/quiz.png)
+
+### Gym mode — timed drills
+
+![Gym](screenshots/gym.png)
+
+### Themes
+
+| Cyberpunk | Academic |
+|-----------|----------|
+| ![Cyberpunk](screenshots/cyberpunk.png) | ![Academic](screenshots/academic.png) |
+
+## Running locally
 
 ```bash
 npx serve tutorial
 ```
 
-### Features
-
-- **12 guided lessons** covering registers, arithmetic, flags, memory, the stack, loops, functions, strings, arrays, bitwise ops, and system calls
-- **Step-by-step debugger** — run, step forward/backward through instructions, see registers, flags, and stack update live
-- **Quiz mode** — multiple-choice and type-in questions with instant feedback and a progress bar
-- **Gym mode** — timed drill workouts across 7 topic categories to build fluency under pressure
-- **Resizable panels** — drag handles to reflow the editor/state/lesson layout; double-click any handle to reset; layout persists across sessions via `localStorage`
-- **CodeMirror editor** with NASM syntax highlighting
-
-### Simulator
+## Simulator
 
 The JavaScript simulator (`tutorial/simulator.js`) implements a subset of x86:
 
@@ -50,7 +82,7 @@ ld main.o -o main -lkernel32
 
 ## Tests
 
-[Playwright](https://playwright.dev/) end-to-end test suite — 55 tests covering page load, tab navigation, simulator run/step/reset, resize handles, quiz, and gym.
+[Playwright](https://playwright.dev/) end-to-end test suite — 54 tests covering page load, tab navigation, simulator run/step/reset, resize handles, quiz, and gym.
 
 ```bash
 npm install
