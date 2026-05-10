@@ -2,6 +2,8 @@
 
 An interactive x86 assembly learning environment that runs entirely in the browser — no install required.
 
+**[Live demo →](https://davidtbilisi.github.io/nasm_learn/)**
+
 ## Live Tutorial
 
 Open `tutorial/index.html` in any modern browser (or serve the directory):
