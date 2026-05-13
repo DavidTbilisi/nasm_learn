@@ -189,6 +189,76 @@ const QUIZ_QUESTIONS = [
     answer: 2,
     explain: 'BT (Bit Test) copies the specified bit into CF and leaves the destination unchanged. AND and TEST modify the destination (or flags but also affect the register for AND). SHR shifts the whole register.',
   },
+
+  // ── Spot the Bug — silent-corruption traps ───────────────────────────────
+  // Code that assembles and runs but produces wrong state. These are the
+  // most-failed concepts in introductory x86 — they only surface as bugs
+  // hundreds of instructions later.
+  {
+    lesson: 'Spot the Bug',
+    type: 'mc',
+    q: 'Memory at address A holds the bytes 0x44, 0x33, 0x22, 0x11 (in order A, A+1, A+2, A+3). On x86 (little-endian), what 32-bit value does `MOV EAX, [A]` load into EAX?',
+    opts: ['0x11223344', '0x44332211', '0x33221144', '0x44112233'],
+    answer: 0,
+    explain: 'x86 is little-endian: the byte at the lowest address is the least-significant byte. The dword is reassembled MSB-first as 0x11_22_33_44. This is the canonical endianness trap in shellcode and binary-file parsers — bytes are written in memory order but interpreted in reverse.',
+  },
+  {
+    lesson: 'Spot the Bug',
+    type: 'code',
+    q: 'EAX starts as 0xFFFFFFFF. After `MOV AL, 1`, what is EAX? (Hint: writing the low 8 bits does NOT zero the upper bits.)',
+    code: 'mov eax, 0xFFFFFFFF\nmov al, 1',
+    reg: 'eax',
+    answer: 0xFFFFFF01,
+    explain: 'MOV to a sub-register only modifies the bits it names. AL = bits 0-7, so EAX becomes 0xFFFFFF01, NOT 0x00000001. On x86-64 this trap also has the opposite version: writing a 32-bit register (MOV EAX, 1) DOES zero the upper 32 of RAX. The asymmetry surprises everyone the first time.',
+  },
+  {
+    lesson: 'Spot the Bug',
+    type: 'code',
+    q: 'You wanted to save EAX and EBX across a call. Code: push eax; push ebx; (call happens); pop eax; pop ebx. With EAX=1 and EBX=2 before, what is EAX after the pops?',
+    code: 'mov eax, 1\nmov ebx, 2\npush eax\npush ebx\npop eax\npop ebx',
+    reg: 'eax',
+    answer: 2,
+    explain: 'Stack is LIFO. PUSH EAX then PUSH EBX means EBX is on top. The first POP retrieves EBX\'s value (2) into EAX. EAX and EBX end up SWAPPED — both registers still hold "saved" values, just the wrong ones. Correct pattern: pops in REVERSE order of pushes (pop ebx first, then pop eax).',
+  },
+  {
+    lesson: 'Spot the Bug',
+    type: 'mc',
+    q: 'A function does `push ebx` and `push esi` in its prologue, but only `pop esi` before `ret`. What happens when `ret` executes?',
+    opts: [
+      'Returns normally — the extra value on the stack is ignored',
+      'Returns to a garbage address because RET pops whatever ESP points at',
+      'Generates a stack-overflow exception',
+      'Returns to the caller plus 4 bytes',
+    ],
+    answer: 1,
+    explain: 'RET pops the value at [ESP] into EIP and jumps. After the missing POP, ESP is 4 bytes too low — it points at the saved EBX, not the return address. The CPU happily jumps to whatever EBX was. Push/pop count mismatches always corrupt control flow this way, and the crash site is far from the cause.',
+  },
+  {
+    lesson: 'Spot the Bug',
+    type: 'mc',
+    q: 'You compute `MOV EAX, 42` and need to keep that value alive. Then you call `MOV EAX, 4 / MOV EBX, 1 / MOV ECX, msg / MOV EDX, len / INT 0x80` to print a string. After the syscall, what is in EAX?',
+    opts: [
+      'Still 42',
+      'The number of bytes written by sys_write (the return value)',
+      'Always 0 on success',
+      '4, the syscall number',
+    ],
+    answer: 1,
+    explain: 'Every Linux syscall returns its result in EAX (or RAX on x86-64), overwriting whatever was there. Your 42 was clobbered twice — first by `MOV EAX, 4` to set the syscall number, then by the kernel writing the return value. To preserve a value across a syscall, push it first or move it to a callee-saved register (EBX/ESI/EDI/EBP) that the kernel does not touch.',
+  },
+  {
+    lesson: 'Spot the Bug',
+    type: 'mc',
+    q: 'Your binary prints the address of a local buffer. Each time you run it (on a modern Linux distro), the printed address is different. Why?',
+    opts: [
+      'gcc randomizes initializer order between builds',
+      'The OS rewrites pointer values when a process forks',
+      'Position-Independent Executable (PIE) base + ASLR randomize the load address every run',
+      'The CPU relocates instructions for cache efficiency',
+    ],
+    answer: 2,
+    explain: 'Modern distros build with -fPIE and the kernel uses ASLR (Address Space Layout Randomization). The executable, libraries, stack, and heap all get a random base address at each exec(). RIP-relative addressing means the code still works, but absolute pointer values change per run. To debug deterministically, disable ASLR (`setarch -R ./prog` or `echo 0 | sudo tee /proc/sys/kernel/randomize_va_space`).',
+  },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
