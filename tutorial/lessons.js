@@ -781,4 +781,168 @@ max_next:
       hint: 'XOR edi, edi / MOV esi, arr / MOV ecx, arrlen. Loop: MOV edx, [esi] / CMP edx, 10 / JLE skip / INC edi. skip: ADD esi, 4 / LOOP ...',
     },
   },
+
+  // ── Lesson 13 ─────────────────────────────────────────────────────────────────
+  {
+    id: 13,
+    title: 'Endianness & Byte Order',
+    intro: `x86 stores multi-byte values least-significant-byte-first in memory. The dword 0x11223344 is laid out as 44 33 22 11 across addresses A, A+1, A+2, A+3. The CPU reassembles them dword-first when you read [A], so the value comes back correctly — but a byte-by-byte dump looks "reversed" to a human reading left-to-right. This is little-endian. It only matters when you cross a width boundary: dumping memory, reading shellcode, parsing a binary file, or sending bytes over a network.`,
+    concepts: [
+      { name: 'Little-endian', desc: 'Low byte at the low address. x86, x86-64, ARM (in its default mode), RISC-V — almost every CPU you\'ll meet on a desktop or server.' },
+      { name: 'Big-endian', desc: 'High byte at the low address. PowerPC, classic SPARC, and "network byte order" (TCP/IP headers). Reads naturally left-to-right like written numbers.' },
+      { name: 'Per-byte vs per-dword view', desc: 'mov al, [A]  reads ONE byte — the byte at A. mov eax, [A] reads FOUR bytes and reassembles them as a dword. Same memory, two different views.' },
+      { name: 'Strings are byte arrays', desc: 'db \'Hello\' lays out H, e, l, l, o at A, A+1, A+2, A+3, A+4 — strings are NOT endian-reversed because they were stored byte-by-byte from the start.' },
+      { name: 'Where it bites you', desc: 'Shellcode payloads (an address has to be inserted in the right byte order), pcap parsing, integer overflow on memcpy boundaries, font/image format headers, sending sensor data over a wire.' },
+    ],
+    diagram: `
+  Storing 0x11223344 at address A on x86 (little-endian)
+  ──────────────────────────────────────────────────────
+  Address:   A      A+1    A+2    A+3
+  Bytes:    [44]   [33]   [22]   [11]
+             ↑                    ↑
+            LSB                  MSB
+
+  Reads:
+    mov al,  [A]    → AL  = 0x44   (just the byte at A)
+    mov ax,  [A]    → AX  = 0x3344 (two bytes, low+high)
+    mov eax, [A]    → EAX = 0x11223344  (CPU reassembles)
+
+  Same dword stored big-endian (PowerPC / network byte order)
+  ──────────────────────────────────────────────────────
+  Address:   A      A+1    A+2    A+3
+  Bytes:    [11]   [22]   [33]   [44]
+             ↑                    ↑
+            MSB                  LSB
+
+  The dword value is identical. Only the byte order differs.`,
+    setupWidget: 'endian',
+    widget: `
+      <div class="section-label">Byte-order explorer</div>
+      <div class="endian-widget">
+        <div class="endian-input-row">
+          <label for="endian-input">32-bit value:</label>
+          <input id="endian-input" type="text" value="0x11223344" spellcheck="false" autocomplete="off">
+          <span id="endian-error" class="endian-error"></span>
+        </div>
+        <div class="endian-grid">
+          <div class="endian-block">
+            <div class="endian-label">Little-endian (x86, x86-64, ARM)</div>
+            <div class="endian-row" id="endian-le"></div>
+            <div class="endian-note">Byte at address A = the low byte.</div>
+          </div>
+          <div class="endian-block">
+            <div class="endian-label">Big-endian (PowerPC, network)</div>
+            <div class="endian-row" id="endian-be"></div>
+            <div class="endian-note">Byte at address A = the high byte.</div>
+          </div>
+        </div>
+      </div>
+    `,
+    code: `section .data
+    val   dd 0x11223344         ; 4 bytes stored little-endian
+    text  db 'Hello'            ; 5 bytes stored byte-by-byte
+    text_len equ $ - text
+
+section .text
+global _start
+
+_start:
+    ; ── 1. Read the same address as bytes, then as a dword ──────────
+    mov  al, [val]              ; AL = 0x44  (byte at val+0  = LSB)
+    mov  bl, [val+1]            ; BL = 0x33
+    mov  cl, [val+2]            ; CL = 0x22
+    mov  dl, [val+3]            ; DL = 0x11  (byte at val+3  = MSB)
+    ; Memory order: 44 33 22 11. Dword view: 0x11223344.
+
+    mov  eax, [val]             ; EAX = 0x11223344 — CPU reassembles.
+
+    ; ── 2. Same trick on the stack ─────────────────────────────────
+    push 0xCAFEBABE             ; ESP -= 4; writes BE BA FE CA at [ESP]
+    mov  esi, esp
+    mov  al, [esi]              ; AL = 0xBE  (low byte at top of stack)
+    mov  ah, [esi+1]            ; AH = 0xBA
+    add  esp, 4                 ; clean up the push
+
+    ; ── 3. Strings are byte-arrays — NOT endian-reversed ────────────
+    mov  esi, text
+    mov  al, [esi]              ; AL = 'H' (0x48) — first letter, first byte.
+    mov  ah, [esi+1]            ; AH = 'e'
+    ; "Hello" is stored as 48 65 6C 6C 6F across five consecutive addresses.
+
+    hlt`,
+    exercise: {
+      prompt: 'Without running it, predict the value of EAX after this code:\n\n  mov dword [val], 0xAABBCCDD\n  mov al, [val+2]\n  mov ah, [val+1]\n\nThen run the program and check.',
+      hint: 'Byte at val+2 = the byte stored two addresses past the start = 0xBB (third byte in memory order). Byte at val+1 = 0xCC. So AL = 0xBB, AH = 0xCC → AX = 0xCCBB.',
+    },
+  },
+
+  // ── Lesson 14 ─────────────────────────────────────────────────────────────────
+  {
+    id: 14,
+    title: 'Buffer Overflow — Reading the Frame',
+    intro: `When a function writes past the end of a stack-allocated buffer, the next thing the bytes overwrite is the saved EBP, and the one after that is the saved return address. This is the structural picture every exploit-writing tutorial assumes you already have. No exploit code below — just the layout. Once you can sketch this frame from memory you can read most beginner-level pwn write-ups without translation.`,
+    concepts: [
+      { name: 'Stack grows down, buffers grow up', desc: 'A local buf[8] starts at [ebp-8] and writes climb toward [ebp-0]. Past that lies the saved EBP, then the saved return address.' },
+      { name: 'The collision', desc: 'Byte 9 of a write to an 8-byte buffer lands on the saved EBP. Bytes 13-16 land on the saved return address. Byte 17+ corrupts the caller\'s frame.' },
+      { name: 'Return-address overwrite', desc: 'When the function executes RET, it pops [esp] into EIP. If you control the bytes at the saved-return slot, you control where execution goes next.' },
+      { name: 'Stack canary', desc: 'Modern compilers insert a secret value between the buffer and the saved EBP. On function exit they check it; if changed, the program aborts. Defeated by leaking the canary, not by writing more bytes.' },
+      { name: 'What you should be able to do', desc: 'Given a function source, point at exactly which byte of input ends up at the saved-return slot. Numbers matter — not just direction.' },
+    ],
+    diagram: `
+  vulnerable(char *src):              Stack frame (grows ↓)
+                                      ─────────────────────────────
+      char buf[8];                    [ebp+8]   src argument
+      strcpy(buf, src);               [ebp+4]   saved return address  ← RET pops this
+                                      [ebp+0]   saved EBP             ← clobbered at byte 9
+                                      [ebp-1]                  ↑
+                                      ...      buf[7]          │  buf grows
+                                      [ebp-7]                  │  upward as
+                                      [ebp-8]  buf[0]          │  strcpy writes
+                                                               ┘
+
+  Mapping input byte → memory slot
+  ──────────────────────────────────────────────────────────────
+    bytes 1..8     → buf[0]..buf[7]    (intended)
+    bytes 9..12    → saved EBP         (silent corruption)
+    bytes 13..16   → saved return addr (HIJACK happens here)
+    bytes 17+      → caller's frame    (further corruption)`,
+    code: `section .data
+    payload  db 'AAAAAAAA'         ; 8 bytes — fills buf exactly, no overflow
+    p_len    equ $ - payload
+
+section .text
+global _start
+
+_start:
+    ; Simulate the function call: caller pushes one argument.
+    push payload                   ; "src" argument
+    call vulnerable
+    add  esp, 4                    ; clean up the argument
+    hlt
+
+; vulnerable(src) — has a buf[8] local that we copy src into.
+; This intentionally walks the bytes byte-by-byte so you can SEE the
+; frame slots fill in the stack panel as you step.
+vulnerable:
+    push ebp
+    mov  ebp, esp
+    sub  esp, 8                    ; reserve buf[8] at [ebp-8] .. [ebp-1]
+
+    mov  esi, [ebp+8]              ; esi = src pointer
+    lea  edi, [ebp-8]              ; edi = &buf[0]
+    mov  ecx, p_len                ; copy p_len bytes
+    cld
+    rep  movsb                     ; mem-copy. Watch the stack panel:
+                                   ;   bytes 1..8 land in buf[0..7]
+                                   ;   if p_len were 12, bytes 9..12
+                                   ;   would have overwritten saved EBP
+
+    mov  esp, ebp                  ; epilogue
+    pop  ebp
+    ret`,
+    exercise: {
+      prompt: 'Change payload to 12 bytes ("AAAAAAAABBBB"). Step through and watch the stack panel: the BBBB lands exactly on the saved-EBP slot at [ebp+0]. What value would you need at p_len for the overflow to reach the saved return address — and how many bytes BEFORE the return-address bytes would have to be "padding" that you don\'t care about?',
+      hint: 'buf is 8 bytes, saved EBP is 4 bytes, so the saved return address sits 12 bytes past the start of buf. To touch it you need p_len = 16. The first 8 bytes are padding (fill buf), the next 4 overwrite saved EBP (also padding), and bytes 13-16 are the address you want EIP to jump to — written little-endian, of course (see lesson 13).',
+    },
+  },
 ];
