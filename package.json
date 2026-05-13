@@ -1,17 +1,36 @@
 {
   "name": "nasm_learn",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Interactive in-browser x86 assembly learning environment with debugger, playground, quiz, and gym modes.",
+  "private": true,
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "nasm",
+    "assembly",
+    "x86",
+    "x86-64",
+    "reverse-engineering",
+    "tutorial",
+    "debugger",
+    "playground",
+    "learning",
+    "learning-resource"
+  ],
+  "author": "David Chincharashvili",
   "license": "ISC",
+  "homepage": "https://davidtbilisi.github.io/nasm_learn/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DavidTbilisi/nasm_learn.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DavidTbilisi/nasm_learn/issues"
+  },
   "type": "commonjs",
   "devDependencies": {
     "@playwright/test": "^1.59.1",
