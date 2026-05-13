@@ -3,3 +3,10 @@ playwright-report/
 test-results/
 *.o
 main
+
+# Editor / agent state
+.claude/
+
+# Local screen recordings + screenshot scratch
+screenshots/tmp/
+screenshots/*.webm
