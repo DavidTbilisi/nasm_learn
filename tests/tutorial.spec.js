@@ -50,9 +50,9 @@ test.describe('Page basics', () => {
     await expect(page.locator('.CodeMirror-code')).toContainText('mov eax, 42');
   });
 
-  test('all 15 tabs render (12 lessons + quiz + gym + playground)', async ({ page }) => {
+  test('all 17 tabs render (14 lessons + quiz + gym + playground)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.tab-btn')).toHaveCount(15);
+    await expect(page.locator('.tab-btn')).toHaveCount(17);
   });
 });
 
@@ -70,6 +70,34 @@ test.describe('Tab navigation', () => {
     await page.goto('/');
     await page.locator('.tab-btn').nth(4).click();
     await expect(page.locator('#lesson-title')).toContainText('Loop');
+  });
+
+  test('clicking lesson 13 loads endianness content + widget', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab-btn').nth(12).click();
+    await expect(page.locator('#lesson-title')).toContainText('Endianness');
+    await expect(page.locator('#lesson-widget')).toBeVisible();
+    await expect(page.locator('#endian-input')).toBeVisible();
+  });
+
+  test('endian widget swaps bytes when value changes', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab-btn').nth(12).click();
+    await page.locator('#endian-input').fill('0x11223344');
+    // Little-endian view: byte at A is the LSB (0x44).
+    const le = page.locator('#endian-le .endian-byte');
+    await expect(le.nth(0)).toHaveText('44');
+    await expect(le.nth(3)).toHaveText('11');
+    // Big-endian view: byte at A is the MSB (0x11).
+    const be = page.locator('#endian-be .endian-byte');
+    await expect(be.nth(0)).toHaveText('11');
+    await expect(be.nth(3)).toHaveText('44');
+  });
+
+  test('clicking lesson 14 loads buffer-overflow content', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab-btn').nth(13).click();
+    await expect(page.locator('#lesson-title')).toContainText('Buffer Overflow');
   });
 
   test('clicking quiz tab shows quiz, hides main layout', async ({ page }) => {
@@ -369,8 +397,8 @@ test.describe('Gym', () => {
     await page.locator('.tab-btn.gym-tab').click();
   });
 
-  test('gym menu shows 7 workout cards', async ({ page }) => {
-    await expect(page.locator('.gym-card')).toHaveCount(7);
+  test('gym menu shows 8 workout cards', async ({ page }) => {
+    await expect(page.locator('.gym-card')).toHaveCount(8);
   });
 
   test('first card is Registers workout', async ({ page }) => {

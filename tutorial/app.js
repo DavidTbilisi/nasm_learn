@@ -18,6 +18,7 @@ const stackPanel   = document.getElementById('stack-panel');
 const stepLog      = document.getElementById('step-log');
 const lessonTitle  = document.getElementById('lesson-title');
 const lessonIntro  = document.getElementById('lesson-intro');
+const lessonWidget = document.getElementById('lesson-widget');
 const conceptsList = document.getElementById('concepts-list');
 const diagramPre   = document.getElementById('diagram-pre');
 const exerciseBox  = document.getElementById('exercise-box');
@@ -282,6 +283,15 @@ function loadLesson(idx) {
   diagramPre.textContent = lesson.diagram || '';
   diagramPre.style.display = lesson.diagram ? 'block' : 'none';
 
+  if (lesson.widget) {
+    lessonWidget.innerHTML  = lesson.widget;
+    lessonWidget.style.display = 'block';
+    if (lesson.setupWidget === 'endian') setupEndianWidget();
+  } else {
+    lessonWidget.innerHTML  = '';
+    lessonWidget.style.display = 'none';
+  }
+
   exerciseBox.textContent = lesson.exercise.prompt;
   hintBox.textContent     = lesson.exercise.hint;
   hintBox.style.display   = 'none';
@@ -327,6 +337,56 @@ hintBtn.addEventListener('click', () => {
   hintBox.style.display = visible ? 'none' : 'block';
   hintBtn.textContent = visible ? 'Show hint' : 'Hide hint';
 });
+
+// ── Widget: byte-order explorer (lesson 13) ───────────────────────────────────
+
+function setupEndianWidget() {
+  const inp = document.getElementById('endian-input');
+  const err = document.getElementById('endian-error');
+  const le  = document.getElementById('endian-le');
+  const be  = document.getElementById('endian-be');
+  if (!inp || !le || !be) return;
+
+  function parseInput(s) {
+    s = s.trim().toLowerCase();
+    if (s === '') return NaN;
+    if (s.startsWith('0x'))  return parseInt(s.slice(2), 16);
+    if (s.startsWith('0b'))  return parseInt(s.slice(2), 2);
+    if (/^[0-9]+$/.test(s))  return parseInt(s, 10);
+    if (/^[0-9a-f]+$/.test(s)) return parseInt(s, 16);
+    return NaN;
+  }
+
+  function byteCell(addr, byte) {
+    const ascii = (byte >= 0x20 && byte <= 0x7e) ? String.fromCharCode(byte) : '·';
+    return `<div class="endian-cell">
+      <div class="endian-addr">A+${addr}</div>
+      <div class="endian-byte">${byte.toString(16).toUpperCase().padStart(2,'0')}</div>
+      <div class="endian-ascii">'${ascii}'</div>
+    </div>`;
+  }
+
+  function update() {
+    const v = parseInput(inp.value);
+    if (isNaN(v) || v < 0 || v > 0xFFFFFFFF) {
+      err.textContent = 'Enter a 32-bit value: 0x… hex, 0b… binary, or decimal.';
+      le.innerHTML = '';
+      be.innerHTML = '';
+      return;
+    }
+    err.textContent = '';
+    const u = v >>> 0;
+    const b0 =  u        & 0xFF;
+    const b1 = (u >>> 8) & 0xFF;
+    const b2 = (u >>> 16) & 0xFF;
+    const b3 = (u >>> 24) & 0xFF;
+    le.innerHTML = byteCell(0, b0) + byteCell(1, b1) + byteCell(2, b2) + byteCell(3, b3);
+    be.innerHTML = byteCell(0, b3) + byteCell(1, b2) + byteCell(2, b1) + byteCell(3, b0);
+  }
+
+  inp.addEventListener('input', update);
+  update();
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadLesson(0);

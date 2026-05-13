@@ -304,6 +304,92 @@ const DRILLS = {
         answer:q.a, explain:`${q.a}.` };
     },
   ],
+
+  // ── Spot the Bug — silent-corruption traps ─────────────────────────────────
+  spotbug: [
+    // Sub-register width — mov al only touches bits 0-7
+    () => {
+      const lo  = rnd(0x10, 0xFF);
+      const hex = lo.toString(16).padStart(2,'0').toUpperCase();
+      const code = `mov eax, 0xDEADBEEF\nmov al, 0x${hex}`;
+      const s = gymRun(code);
+      return { cat:'Spot the Bug', diff:2,
+        q:`EAX = 0xDEADBEEF. After <code>mov al, 0x${hex}</code> what is EAX? <em>(MOV AL only writes bits 0-7.)</em>`,
+        code, answer:s.regs.eax>>>0, type:'type',
+        explain:`Writing AL leaves the upper 24 bits alone. EAX = 0xDEADBE${hex} = ${s.regs.eax>>>0}. The same write to a 32-bit reg on x86-64 (<code>mov eax, X</code>) WOULD zero the upper 32 of RAX — that asymmetry is the trap.` };
+    },
+
+    // Pop in wrong order — silently swaps registers
+    () => {
+      const a = rnd(10,250);
+      let   b = rnd(10,250); while (b === a) b = rnd(10,250);
+      const code = `mov eax, ${a}\nmov ebx, ${b}\npush eax\npush ebx\npop eax\npop ebx`;
+      const s = gymRun(code);
+      return { cat:'Spot the Bug', diff:2,
+        q:`EAX=${a}, EBX=${b}. After <code>push eax; push ebx; pop eax; pop ebx</code>, what is EAX?`,
+        code, answer:s.regs.eax>>>0, type:'type',
+        explain:`Stack is LIFO. The last push (EBX=${b}) is on top, so the first POP puts ${b} into EAX. Registers ended SWAPPED. Correct pattern: pop in REVERSE order of the pushes.` };
+    },
+
+    // Endianness — byte at top of pushed dword
+    () => {
+      const bytes = [rnd(1,255), rnd(1,255), rnd(1,255), rnd(1,255)];
+      const dword = ((bytes[3]<<24)|(bytes[2]<<16)|(bytes[1]<<8)|bytes[0]) >>> 0;
+      const hex   = dword.toString(16).padStart(8,'0').toUpperCase();
+      const code  = `push 0x${hex}\nxor eax, eax\nmov al, [esp]`;
+      const s = gymRun(code);
+      return { cat:'Spot the Bug', diff:2,
+        q:`After <code>push 0x${hex}</code>, you do <code>mov al, [esp]</code>. What is AL? <em>(x86 is little-endian.)</em>`,
+        code, answer:s.regs.eax>>>0, type:'type',
+        explain:`Little-endian stores the low byte at the low address. The byte at [ESP] = low byte of the dword = 0x${bytes[0].toString(16).padStart(2,'0').toUpperCase()} = ${bytes[0]}.` };
+    },
+
+    // Syscall clobbers EAX with the return value
+    () => {
+      const len = rnd(3, 16);
+      const code = `mov eax, 0xCAFE\nmov ebx, 1\nmov ecx, 0x4000\nmov edx, ${len}\nmov eax, 4\nint 0x80`;
+      const s = gymRun(code);
+      return { cat:'Spot the Bug', diff:2,
+        q:`Right before <code>int 0x80</code>, EAX = 4 (sys_write) and EDX = ${len}. After the syscall returns, what is EAX?`,
+        code, answer:s.regs.eax>>>0, type:'type',
+        explain:`Every Linux syscall returns its result in EAX, overwriting the syscall number you put there. sys_write returns bytes-written = ${len}. To preserve a value across a syscall, PUSH it first or stash it in a callee-saved register.` };
+    },
+
+    // SAR vs SHR on a negative value — signed division must use SAR
+    () => {
+      const mag   = pick([8, 16, 32, 64, 100]);
+      const shift = pick([1, 2]);
+      const neg   = ((-mag) >>> 0);
+      const code  = `mov eax, 0x${neg.toString(16).toUpperCase()}\nsar eax, ${shift}`;
+      const s = gymRun(code);
+      const signed = s.regs.eax | 0;
+      return { cat:'Spot the Bug', diff:3,
+        q:`EAX = -${mag} (stored as 0x${neg.toString(16).toUpperCase()}). After <code>sar eax, ${shift}</code>, what is EAX as an UNSIGNED 32-bit value? <em>(SAR preserves the sign bit; SHR would not.)</em>`,
+        code, answer:s.regs.eax>>>0, type:'type',
+        explain:`SAR (arithmetic shift right) copies the sign bit into vacated bits → signed division by 2^${shift}. As signed: ${signed}. As unsigned: ${s.regs.eax>>>0} (= 0x${(s.regs.eax>>>0).toString(16).toUpperCase()}). SHR would have given the wrong answer 0x${((neg>>>0) >>> shift).toString(16).toUpperCase()} — losing the sign.` };
+    },
+
+    // INC does not update CF (vs ADD reg, 1)
+    () => {
+      const q = pick([
+        { q:'EAX = 0xFFFFFFFF. After <code>inc eax</code>, what is the state of <strong>CF</strong>?',
+          a:'CF is UNCHANGED (INC does not touch CF)',
+          opts:['CF is UNCHANGED (INC does not touch CF)','CF = 1 (the result wrapped)','CF = 0 (because the result is zero)','CF mirrors ZF'] },
+        { q:'You want to detect an unsigned wrap on an increment. <code>inc eax</code> or <code>add eax, 1</code>?',
+          a:'add eax, 1 — only ADD updates CF',
+          opts:['add eax, 1 — only ADD updates CF','inc eax — INC always sets CF on wrap','Either works','Neither — you need ADC'] },
+        { q:'Why is <code>xor eax, eax</code> often preferred to <code>mov eax, 0</code>?',
+          a:'Smaller encoding (2 bytes vs 5) and faster on most uarches',
+          opts:['Smaller encoding (2 bytes vs 5) and faster on most uarches','XOR is the only way to clear a register','XOR preserves flags; MOV trashes them','XOR atomically resets all eight GPRs'] },
+        { q:'sys_write returns its result in which register?',
+          a:'EAX (overwriting the syscall number)',
+          opts:['EAX (overwriting the syscall number)','EBX','EDX','None — syscalls have no return'] },
+      ]);
+      return { cat:'Spot the Bug', diff:2, q:q.q, code:null, type:'mc',
+        opts: shuf(q.opts).map(o => ({ label:o, correct: o===q.a })),
+        answer:q.a, explain:`${q.a}.` };
+    },
+  ],
 };
 
 // ── Workout definitions ───────────────────────────────────────────────────────
@@ -314,7 +400,8 @@ const WORKOUTS = [
   { id:'trace',      icon:'🧠', name:'Mental Trace', desc:'Run 4-6 instructions in your head.',        cats:['trace'],                                        reps:6,  secs:25 },
   { id:'addressing', icon:'📍', name:'Addressing',   desc:'[ebp+8], [arr+ecx*4], LEA.',                cats:['addressing'],                                   reps:8,  secs:15 },
   { id:'idioms',     icon:'⚡', name:'Idioms',       desc:'Fastest, most idiomatic assembly patterns.', cats:['idioms'],                                       reps:8,  secs:15 },
-  { id:'fullbody',   icon:'💪', name:'Full Body',    desc:'All categories. The real workout.',          cats:['registers','arithmetic','flags','trace','addressing','idioms'], reps:12, secs:18 },
+  { id:'spotbug',    icon:'🐛', name:'Spot the Bug', desc:'Silent-corruption traps: endianness, sub-registers, pop order.', cats:['spotbug'],                                      reps:6,  secs:25 },
+  { id:'fullbody',   icon:'💪', name:'Full Body',    desc:'All categories. The real workout.',          cats:['registers','arithmetic','flags','trace','addressing','idioms','spotbug'], reps:14, secs:20 },
 ];
 
 // ── Session state ─────────────────────────────────────────────────────────────

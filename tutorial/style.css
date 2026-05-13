@@ -359,6 +359,81 @@ header h1::after {
   white-space: pre;
 }
 
+/* Endian-explorer widget (lesson 13) */
+.endian-widget {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.endian-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.endian-input-row label {
+  color: var(--p-dim);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+}
+#endian-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--p);
+  font-family: var(--font);
+  font-size: 15px;
+  padding: 4px 8px;
+  min-width: 160px;
+}
+#endian-input:focus {
+  outline: none;
+  border-color: var(--p);
+  box-shadow: var(--glow-sm);
+}
+.endian-error {
+  color: #e44;
+  font-size: 13px;
+}
+.endian-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 900px) {
+  .endian-grid { grid-template-columns: 1fr 1fr; }
+}
+.endian-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.endian-label {
+  color: var(--p-dim);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.endian-row {
+  display: flex;
+  gap: 4px;
+}
+.endian-cell {
+  flex: 1;
+  text-align: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 6px 4px;
+  font-family: var(--font);
+}
+.endian-addr  { font-size: 11px; color: var(--p-vdim); }
+.endian-byte  { font-size: 18px; color: var(--p); letter-spacing: 0.05em; }
+.endian-ascii { font-size: 11px; color: var(--p-vdim); }
+.endian-note  { font-size: 12px; color: var(--p-vdim); font-style: italic; }
+
 /* Exercise card */
 .exercise-card {
   background: var(--surface2);
