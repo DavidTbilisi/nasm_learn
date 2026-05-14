@@ -35,3 +35,28 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+  fidelity:
+    name: Simulator fidelity vs. real x86
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install nasm and unicorn
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm
+          python -m pip install --upgrade pip
+          pip install unicorn
+
+      - name: Run fidelity check
+        run: npm run check:fidelity

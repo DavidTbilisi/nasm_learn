@@ -356,9 +356,15 @@ class NASMSimulator {
 
       case 'add': { const a=g(0),b=g(1),r=(a+b)>>>0; this._updateFlags(r,'add',a,b); s(0,r); break; }
       case 'sub': { const a=g(0),b=g(1),r=(a-b)>>>0; this._updateFlags(r,'sub',a,b); s(0,r); break; }
-      case 'inc': { const a=g(0),r=(a+1)>>>0; this._updateFlags(r,'add',a,1); s(0,r); break; }
-      case 'dec': { const a=g(0),r=(a-1)>>>0; this._updateFlags(r,'sub',a,1); s(0,r); break; }
+      // INC/DEC do NOT touch CF — preserve it across the flag update.
+      case 'inc': { const a=g(0),r=(a+1)>>>0; const cf=this.flags.cf; this._updateFlags(r,'add',a,1); this.flags.cf=cf; s(0,r); break; }
+      case 'dec': { const a=g(0),r=(a-1)>>>0; const cf=this.flags.cf; this._updateFlags(r,'sub',a,1); this.flags.cf=cf; s(0,r); break; }
       case 'neg': { const a=g(0),r=(0-a)>>>0; this._updateFlags(r,'sub',0,a); s(0,r); break; }
+
+      // Carry-flag direct manipulation.
+      case 'stc': this.flags.cf = 1; break;
+      case 'clc': this.flags.cf = 0; break;
+      case 'cmc': this.flags.cf = this.flags.cf ? 0 : 1; break;
 
       case 'and': { const r=(g(0)&g(1))>>>0; this._updateFlags(r,'logic',0,0); s(0,r); break; }
       case 'or':  { const r=(g(0)|g(1))>>>0; this._updateFlags(r,'logic',0,0); s(0,r); break; }
@@ -386,15 +392,23 @@ class NASMSimulator {
         this.flags.cf = this.flags.of = this.regs.edx ? 1 : 0; break;
       }
       case 'imul': {
+        // CF=OF=1 when the truncated 32-bit signed result differs from the
+        // full signed product — i.e. signed overflow occurred. Otherwise 0.
+        let full;
         if (args.length === 1) {
-          const res = BigInt(this.regs.eax|0) * BigInt(g(0)|0);
-          this.regs.eax = Number(res & 0xFFFFFFFFn)>>>0;
-          this.regs.edx = Number((res>>32n) & 0xFFFFFFFFn)>>>0;
+          full = BigInt(this.regs.eax|0) * BigInt(g(0)|0);
+          this.regs.eax = Number(full & 0xFFFFFFFFn)>>>0;
+          this.regs.edx = Number((full>>32n) & 0xFFFFFFFFn)>>>0;
         } else if (args.length === 2) {
-          s(0, (((g(0)|0)*(g(1)|0))|0)>>>0);
+          full = BigInt(g(0)|0) * BigInt(g(1)|0);
+          s(0, Number(full & 0xFFFFFFFFn)>>>0);
         } else {
-          s(0, (((g(1)|0)*(g(2)|0))|0)>>>0);
+          full = BigInt(g(1)|0) * BigInt(g(2)|0);
+          s(0, Number(full & 0xFFFFFFFFn)>>>0);
         }
+        const truncated = BigInt.asIntN(32, full);
+        const overflow = (truncated !== full) ? 1 : 0;
+        this.flags.cf = this.flags.of = overflow;
         break;
       }
       case 'div': {
@@ -623,3 +637,6 @@ class NASMSimulator {
     };
   }
 }
+
+if (typeof module !== 'undefined' && module.exports) module.exports = NASMSimulator;
+
