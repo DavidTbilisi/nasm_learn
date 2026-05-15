@@ -24,6 +24,8 @@ const diagramPre   = document.getElementById('diagram-pre');
 const exerciseBox  = document.getElementById('exercise-box');
 const hintBox      = document.getElementById('hint-box');
 const hintBtn      = document.getElementById('hint-btn');
+const solutionBox  = document.getElementById('solution-box');
+const solutionBtn  = document.getElementById('solution-btn');
 const tabBtns      = document.querySelectorAll('.tab-btn');
 const stepCounter  = document.getElementById('step-counter');
 const errorBanner  = document.getElementById('error-banner');
@@ -50,7 +52,7 @@ function renderFlags(state, prevState) {
   flagBar.innerHTML = ['zf','cf','sf','of','df'].map(f => {
     const val = state.flags[f];
     const changed = prevState && prevState.flags[f] !== val;
-    return `<span class="flag ${val ? 'flag-set' : 'flag-clear'} ${changed ? 'changed' : ''}">
+    return `<span class="flag ${val ? 'flag-set' : 'flag-clear'} ${changed ? 'changed' : ''}" data-flag="${f}">
       <span class="flag-name">${f.toUpperCase()}</span><span class="flag-val">${val}</span>
     </span>`;
   }).join('');
@@ -297,6 +299,12 @@ function loadLesson(idx) {
   hintBox.style.display   = 'none';
   hintBtn.textContent     = 'Show hint';
 
+  solutionBox.textContent = lesson.exercise.solution ?? '';
+  solutionBox.style.display = 'none';
+  solutionBtn.textContent = 'Show solution';
+  solutionBtn.disabled = !lesson.exercise.solution;
+  solutionBtn.style.opacity = lesson.exercise.solution ? '' : '0.45';
+
   cm.setValue(lesson.code.trim());
   cm.clearHistory();
   doReset();
@@ -307,6 +315,7 @@ tabBtns.forEach((btn, i) => {
     if (btn.classList.contains('gym-tab')) {
       window.hideQuiz?.();
       window.hidePlayground?.();
+      window.hideRank?.();
       window.showGym?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
@@ -314,6 +323,7 @@ tabBtns.forEach((btn, i) => {
     if (btn.classList.contains('quiz-tab')) {
       window.hideGym?.();
       window.hidePlayground?.();
+      window.hideRank?.();
       window.showQuiz?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
@@ -321,21 +331,124 @@ tabBtns.forEach((btn, i) => {
     if (btn.classList.contains('playground-tab')) {
       window.hideGym?.();
       window.hideQuiz?.();
+      window.hideRank?.();
       window.showPlayground?.();
+      tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
+      return;
+    }
+    if (btn.classList.contains('rank-tab')) {
+      window.hideGym?.();
+      window.hideQuiz?.();
+      window.hidePlayground?.();
+      window.showRank?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
     }
     window.hideGym?.();
     window.hideQuiz?.();
     window.hidePlayground?.();
+    window.hideRank?.();
     loadLesson(i);
   });
 });
+
+/** Jump to a main lesson tab (0–14) from Rank recommendations. */
+window.goToLessonTab = lessonIdx => {
+  if (lessonIdx < 0 || lessonIdx > 14) return;
+  window.hideRank?.();
+  window.hideGym?.();
+  window.hideQuiz?.();
+  window.hidePlayground?.();
+  const tabs = document.querySelectorAll('.tab-btn');
+  const btn = tabs[lessonIdx];
+  if (btn) btn.click();
+};
 
 hintBtn.addEventListener('click', () => {
   const visible = hintBox.style.display === 'block';
   hintBox.style.display = visible ? 'none' : 'block';
   hintBtn.textContent = visible ? 'Show hint' : 'Hide hint';
+});
+
+// ── Flag bar: delayed tooltips (x86 EFLAGS subset) ─────────────────────────────
+const FLAG_TOOLTIP_DELAY_MS = 5000;
+const FLAG_HELP = {
+  zf: 'Zero flag (ZF): 1 if the last arithmetic or logical result was zero; 0 otherwise. Conditional jumps like JE/JNE test this.',
+  cf: 'Carry flag (CF): 1 if unsigned addition carried out of bit 31, or subtraction needed a borrow. Used by JC/JNC and unsigned high/low comparisons (JA/JB).',
+  sf: 'Sign flag (SF): 1 if bit 31 of the result is set — the value is negative in signed (two\'s complement) interpretation.',
+  of: 'Overflow flag (OF): 1 if a signed operation produced a result too large or too small for 32-bit two\'s complement. Distinct from CF (unsigned overflow).',
+  df: 'Direction flag (DF): Controls string instructions (MOVS/CMPS/SCAS/STOS). CLD clears DF (forward, low→high addresses); STD sets DF (backward).',
+};
+
+(function setupFlagBarTooltips() {
+  let timer = null;
+  let hoverFlagEl = null;
+  const tip = document.createElement('div');
+  tip.id = 'flag-tooltip';
+  tip.className = 'flag-tooltip';
+  tip.setAttribute('role', 'tooltip');
+  tip.hidden = true;
+  document.body.appendChild(tip);
+
+  function hideFlagTooltip() {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    hoverFlagEl = null;
+    tip.hidden = true;
+    tip.textContent = '';
+  }
+
+  function positionTip(anchor) {
+    tip.hidden = false;
+    const r = anchor.getBoundingClientRect();
+    const margin = 8;
+    const gap = 6;
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    let left = r.left + r.width / 2 - tw / 2;
+    let top = r.bottom + gap;
+    left = Math.max(margin, Math.min(left, window.innerWidth - tw - margin));
+    if (top + th > window.innerHeight - margin) top = r.top - th - gap;
+    top = Math.max(margin, top);
+    tip.style.left = `${Math.round(left)}px`;
+    tip.style.top = `${Math.round(top)}px`;
+  }
+
+  flagBar.addEventListener('mouseover', (e) => {
+    const el = e.target.closest('.flag');
+    if (!el || !flagBar.contains(el)) return;
+    if (hoverFlagEl === el) return;
+    hideFlagTooltip();
+    const key = el.dataset.flag;
+    if (!key || !FLAG_HELP[key]) return;
+    hoverFlagEl = el;
+    timer = setTimeout(() => {
+      timer = null;
+      if (hoverFlagEl !== el) return;
+      tip.textContent = FLAG_HELP[key];
+      requestAnimationFrame(() => positionTip(el));
+    }, FLAG_TOOLTIP_DELAY_MS);
+  });
+
+  flagBar.addEventListener('mouseout', (e) => {
+    const el = e.target.closest('.flag');
+    if (!el || !flagBar.contains(el)) return;
+    const next = e.relatedTarget;
+    if (next && (el === next || el.contains(next))) return;
+    hideFlagTooltip();
+  });
+
+  window.addEventListener('scroll', hideFlagTooltip, true);
+  window.addEventListener('resize', hideFlagTooltip);
+})();
+
+solutionBtn.addEventListener('click', () => {
+  if (solutionBtn.disabled) return;
+  const visible = solutionBox.style.display === 'block';
+  solutionBox.style.display = visible ? 'none' : 'block';
+  solutionBtn.textContent = visible ? 'Show solution' : 'Hide solution';
 });
 
 // ── Widget: byte-order explorer (lesson 13) ───────────────────────────────────

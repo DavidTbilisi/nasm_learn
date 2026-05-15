@@ -29,6 +29,12 @@ test.describe('Page basics', () => {
     await expect(page.locator('.tab-btn.active')).toContainText('1 · Registers');
   });
 
+  test('flag cells expose data-flag for tooltips', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#flag-bar .flag[data-flag="zf"]')).toBeVisible();
+    await expect(page.locator('#flag-bar .flag[data-flag="df"]')).toBeVisible();
+  });
+
   test('lesson title renders', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#lesson-title')).toContainText('Registers');
@@ -50,15 +56,31 @@ test.describe('Page basics', () => {
     await expect(page.locator('.CodeMirror-code')).toContainText('mov eax, 42');
   });
 
-  test('all 17 tabs render (14 lessons + quiz + gym + playground)', async ({ page }) => {
+  test('all 19 tabs render (15 lessons + quiz + gym + playground + rank)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.tab-btn')).toHaveCount(17);
+    await expect(page.locator('.tab-btn')).toHaveCount(19);
   });
 });
 
 // ── 2. Tab navigation ────────────────────────────────────────────────────────
 
 test.describe('Tab navigation', () => {
+  test('clicking rank tab shows rank wrap, hides main layout', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab-btn.rank-tab').click();
+    await expect(page.locator('#rank-wrap')).toBeVisible();
+    await expect(page.locator('#main-layout')).not.toBeVisible();
+    await expect(page.locator('#rank-panel-hub')).toContainText('Rank');
+  });
+
+  test('switching from rank back to lesson restores main layout', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab-btn.rank-tab').click();
+    await page.locator('.tab-btn').first().click();
+    await expect(page.locator('#main-layout')).toBeVisible();
+    await expect(page.locator('#rank-wrap')).not.toBeVisible();
+  });
+
   test('clicking lesson 2 loads arithmetic content', async ({ page }) => {
     await page.goto('/');
     await page.locator('.tab-btn').nth(1).click();
@@ -100,6 +122,13 @@ test.describe('Tab navigation', () => {
     await expect(page.locator('#lesson-title')).toContainText('Buffer Overflow');
   });
 
+  test('clicking lesson 15 loads shellcode framing content', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab-btn').nth(14).click();
+    await expect(page.locator('#lesson-title')).toContainText('Shellcode');
+    await expect(page.locator('#lesson-intro')).toContainText('authorized');
+  });
+
   test('clicking quiz tab shows quiz, hides main layout', async ({ page }) => {
     await page.goto('/');
     await page.locator('.tab-btn.quiz-tab').click();
@@ -137,6 +166,17 @@ test.describe('Tab navigation', () => {
     await expect(page.locator('#hint-box')).toBeVisible();
     await page.click('#hint-btn');
     await expect(page.locator('#hint-box')).not.toBeVisible();
+  });
+
+  test('solution button toggles solution panel with lesson 1 assembly', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#solution-box')).not.toBeVisible();
+    await expect(page.locator('#solution-btn')).toBeEnabled();
+    await page.click('#solution-btn');
+    await expect(page.locator('#solution-box')).toBeVisible();
+    await expect(page.locator('#solution-box')).toContainText('mov ebx, 100');
+    await page.click('#solution-btn');
+    await expect(page.locator('#solution-box')).not.toBeVisible();
   });
 });
 

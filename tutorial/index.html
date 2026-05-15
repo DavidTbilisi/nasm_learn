@@ -29,9 +29,11 @@
     <button class="tab-btn">12 · Arrays</button>
     <button class="tab-btn">13 · Endianness</button>
     <button class="tab-btn">14 · Buffer Overflow</button>
+    <button class="tab-btn">15 · Shellcode</button>
     <button class="tab-btn quiz-tab">✎ Quiz</button>
     <button class="tab-btn gym-tab">🏋 Gym</button>
     <button class="tab-btn playground-tab">▷ Playground</button>
+    <button class="tab-btn rank-tab">◇ Rank</button>
   </div>
   <button id="theme-btn" class="btn btn-secondary theme-toggle" title="Switch theme">CYBER ◈</button>
 </header>
@@ -55,8 +57,12 @@
     <div class="exercise-card">
       <div class="section-label">Exercise</div>
       <p id="exercise-box"></p>
-      <button id="hint-btn">Show hint</button>
+      <div class="exercise-actions">
+        <button id="hint-btn" type="button">Show hint</button>
+        <button id="solution-btn" type="button">Show solution</button>
+      </div>
       <p id="hint-box" style="display:none"></p>
+      <pre id="solution-box" class="solution-box" style="display:none"></pre>
     </div>
   </aside>
 
@@ -215,6 +221,19 @@
 
 </div>
 
+<!-- ── Rank: placement + adaptive practice ─────────────────────────────────── -->
+<div id="rank-wrap" class="rank-wrap" style="display:none">
+  <aside class="rank-sidebar">
+    <button type="button" id="rank-btn-home" class="btn btn-secondary">← Lessons</button>
+    <div id="rank-side-rank"></div>
+  </aside>
+  <div class="rank-main-col">
+    <div id="rank-panel-hub"></div>
+    <div id="rank-panel-place" style="display:none"></div>
+    <div id="rank-panel-practice" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ── Quiz layout ──────────────────────────────────────────────────────────── -->
 <div id="quiz-wrap">
   <div id="quiz-sidebar">
@@ -256,6 +275,7 @@
 <script src="app.js"></script>
 <script src="quiz.js"></script>
 <script src="gym.js"></script>
+<script src="rank.js"></script>
 <script src="playground.js"></script>
 <script src="resize.js"></script>
 <script src="theme.js"></script>

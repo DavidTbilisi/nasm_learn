@@ -35,6 +35,15 @@ _start:
     exercise: {
       prompt: 'Modify the code so that EBX ends up holding the value 100 and ECX ends up holding 200. Then set EDX to the sum of EBX and ECX using ADD.',
       hint: 'Use MOV to load the constants, then ADD edx, ecx after setting both.',
+      solution: `section .text
+global _start
+
+_start:
+    mov ebx, 100
+    mov ecx, 200
+    mov edx, ebx
+    add edx, ecx
+    hlt`,
     },
   },
 
@@ -83,6 +92,15 @@ _start:
     exercise: {
       prompt: 'Write code that computes 3 × (10 + 5) and leaves the final product in EAX. Use ADD for the sum and MUL for the product.',
       hint: 'ADD eax, 5 first (after setting EAX=10), then MOV ecx, 3 and MUL ecx.',
+      solution: `section .text
+global _start
+
+_start:
+    mov eax, 10
+    add eax, 5
+    mov ecx, 3
+    mul ecx
+    hlt`,
     },
   },
 
@@ -133,6 +151,16 @@ done:
     exercise: {
       prompt: 'Write a loop that multiplies EAX by 2 exactly 4 times, starting from EAX=1. Use ADD eax, eax (doubling trick) inside the loop body.',
       hint: 'Set ECX=4 as the loop counter. Each iteration: ADD eax, eax. After the loop EAX should be 16.',
+      solution: `section .text
+global _start
+
+_start:
+    mov eax, 1
+    mov ecx, 4
+double_loop:
+    add eax, eax
+    loop double_loop
+    hlt`,
     },
   },
 
@@ -175,6 +203,23 @@ square:            ; returns argument² in EAX
     exercise: {
       prompt: 'Add a second subroutine called "add_two" that takes two arguments and returns their sum in EAX. Call it with arguments 13 and 27. The result should be 40.',
       hint: 'Push the second argument first, then the first (right-to-left). Inside add_two: [EBP+8] is arg1, [EBP+12] is arg2.',
+      solution: `section .text
+global _start
+
+_start:
+    push 27
+    push 13
+    call add_two
+    add esp, 8
+    hlt
+
+add_two:
+    push ebp
+    mov ebp, esp
+    mov eax, [ebp+8]
+    add eax, [ebp+12]
+    pop ebp
+    ret`,
     },
   },
 
@@ -241,6 +286,16 @@ inner_loop:
     exercise: {
       prompt: 'Write a loop that computes 2^8 (2 to the power of 8) and stores the result in EAX. Start with EAX=1 and double it 8 times using ADD eax, eax inside a counted loop.',
       hint: 'Set ECX=8, EAX=1. Each iteration: ADD eax, eax. After the loop EAX should be 256.',
+      solution: `section .text
+global _start
+
+_start:
+    mov eax, 1
+    mov ecx, 8
+pow_loop:
+    add eax, eax
+    loop pow_loop
+    hlt`,
     },
   },
 
@@ -306,6 +361,23 @@ section .data
     exercise: {
       prompt: 'Change the program to print your own message instead of "Hello, World!". Then exit with code 42 instead of 0. Watch the stdout panel and exit code update.',
       hint: 'Edit the string after db (keep the quotes and trailing 0x0A for the newline). Change MOV EBX, 0 to MOV EBX, 42 before sys_exit. Update msg_len if your string length changed — or let equ recompute it automatically.',
+      solution: `section .data
+    msg     db 'NASM Learn', 0x0A
+    msg_len equ $ - msg
+
+section .text
+global _start
+
+_start:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, msg
+    mov edx, msg_len
+    int 0x80
+
+    mov eax, 1
+    mov ebx, 42
+    int 0x80`,
     },
   },
 
@@ -391,6 +463,24 @@ _start:
     exercise: {
       prompt: 'Add a second string "Hello" in .data and use REPE CMPSB to compare it against src. After the loop, check ZF: if strings are equal ZF=1. Watch the flags panel — ZF should be 1 this time.',
       hint: 'Declare: copy db \'Hello\', 0. Then MOV ESI, src / MOV EDI, copy / MOV ECX, 6 / REPE CMPSB. Equal strings leave ZF=1.',
+      solution: `section .data
+    src   db 'Hello', 0
+    pat   db 'World', 0
+    copy  db 'Hello', 0
+
+section .bss
+    dst   resb 16
+
+section .text
+global _start
+
+_start:
+    cld
+    mov esi, src
+    mov edi, copy
+    mov ecx, 6
+    repe cmpsb
+    hlt`,
     },
   },
 
@@ -473,6 +563,14 @@ _start:
     exercise: {
       prompt: 'Write code that packs two 4-bit values (nibbles) into one byte in EAX. Put the value 0xA into the high nibble and 0x5 into the low nibble. The result should be EAX = 0xA5. Use SHL to shift the first value, then OR to combine.',
       hint: 'MOV eax, 0xA / SHL eax, 4 → EAX = 0xA0. Then OR eax, 0x5 → EAX = 0xA5.',
+      solution: `section .text
+global _start
+
+_start:
+    mov eax, 0xA
+    shl eax, 4
+    or eax, 0x5
+    hlt`,
     },
   },
 
@@ -541,6 +639,19 @@ _start:
     exercise: {
       prompt: 'Load arr[4] (value 50) into EBX using scaled-index addressing. Then use LEA to compute the address of arr[4] and store it in ECX. Verify by reading [ECX] — it should equal EBX.',
       hint: 'MOV esi, 4 / MOV ebx, [arr+esi*4] for the value. LEA ecx, [arr+esi*4] for the address. MOV eax, [ecx] — EAX should be 50.',
+      solution: `section .data
+    val  dd 99
+    arr  dd 10, 20, 30, 40, 50
+
+section .text
+global _start
+
+_start:
+    mov esi, 4
+    mov ebx, [arr+esi*4]
+    lea ecx, [arr+esi*4]
+    mov eax, [ecx]
+    hlt`,
     },
   },
 
@@ -626,6 +737,16 @@ sign_done:
     exercise: {
       prompt: 'Compute (-100) ÷ (-3) using CDQ and IDIV. What are the quotient (EAX) and remainder (EDX)? Hint: the mathematically correct answer has EAX = 33.',
       hint: 'MOV eax, -100 / CDQ / MOV ecx, -3 / IDIV ecx. Expected: EAX = 33, EDX = -1 (because 33 × (-3) = -99, and -100 − (-99) = -1).',
+      solution: `section .text
+global _start
+
+_start:
+    mov eax, -100
+    cdq
+    mov ecx, -3
+    idiv ecx
+    ; EAX = 33 (quotient), EDX = -1 (remainder)
+    hlt`,
     },
   },
 
@@ -696,6 +817,39 @@ ad_done:
     exercise: {
       prompt: 'Write a "clamp(val, lo, hi)" function that returns val if lo ≤ val ≤ hi, lo if val < lo, or hi if val > hi. Call it with (25, 10, 20) — EAX should be 20. Then call it with (5, 10, 20) — EAX should be 10.',
       hint: '[EBP+8]=val, [EBP+12]=lo, [EBP+16]=hi. Load val into EAX. CMP eax, [ebp+12] / JGE check_hi. If below lo: MOV eax, [ebp+12] / JMP done. check_hi: CMP eax, [ebp+16] / JLE done. MOV eax, [ebp+16].',
+      solution: `section .text
+global _start
+
+_start:
+    push 20
+    push 10
+    push 25
+    call clamp
+    add esp, 12
+
+    push 20
+    push 10
+    push 5
+    call clamp
+    add esp, 12
+    hlt
+
+clamp:
+    push ebp
+    mov ebp, esp
+    mov eax, [ebp+8]
+    cmp eax, [ebp+12]
+    jge chk_hi
+    mov eax, [ebp+12]
+    jmp cl_done
+chk_hi:
+    cmp eax, [ebp+16]
+    jle cl_done
+    mov eax, [ebp+16]
+cl_done:
+    mov esp, ebp
+    pop ebp
+    ret`,
     },
   },
 
@@ -779,6 +933,20 @@ max_next:
     exercise: {
       prompt: 'After the existing loops, count how many elements are greater than 10 and store the count in EDI. Expected: 3 (the values 17, 42, and 11 are all greater than 10).',
       hint: 'XOR edi, edi / MOV esi, arr / MOV ecx, arrlen. Loop: MOV edx, [esi] / CMP edx, 10 / JLE skip / INC edi. skip: ADD esi, 4 / LOOP ...',
+      solution: `Insert after the max-finding loop (after "loop max_loop") and before "; ── 4. Write to an array element" so arr is still 3,17,8,42,11:
+
+    xor  edi, edi
+    mov  esi, arr
+    mov  ecx, arrlen
+gt10_loop:
+    mov  edx, [esi]
+    cmp  edx, 10
+    jle  gt10_skip
+    inc  edi
+gt10_skip:
+    add  esi, 4
+    loop gt10_loop
+    ; EDI = 3`,
     },
   },
 
@@ -873,6 +1041,11 @@ _start:
     exercise: {
       prompt: 'Without running it, predict the value of EAX after this code:\n\n  mov dword [val], 0xAABBCCDD\n  mov al, [val+2]\n  mov ah, [val+1]\n\nThen run the program and check.',
       hint: 'Byte at val+2 = the byte stored two addresses past the start = 0xBB (third byte in memory order). Byte at val+1 = 0xCC. So AL = 0xBB, AH = 0xCC → AX = 0xCCBB.',
+      solution: `Little-endian layout for dword 0xAABBCCDD at val:
+  [val+0]=0xDD, [val+1]=0xCC, [val+2]=0xBB, [val+3]=0xAA
+
+After mov al,[val+2] → AL=0xBB. After mov ah,[val+1] → AH=0xCC.
+AX = (AH<<8)|AL = 0xCCBB (upper EAX bits unchanged unless you xor/clear them first).`,
     },
   },
 
@@ -943,6 +1116,64 @@ vulnerable:
     exercise: {
       prompt: 'Change payload to 12 bytes ("AAAAAAAABBBB"). Step through and watch the stack panel: the BBBB lands exactly on the saved-EBP slot at [ebp+0]. What value would you need at p_len for the overflow to reach the saved return address — and how many bytes BEFORE the return-address bytes would have to be "padding" that you don\'t care about?',
       hint: 'buf is 8 bytes, saved EBP is 4 bytes, so the saved return address sits 12 bytes past the start of buf. To touch it you need p_len = 16. The first 8 bytes are padding (fill buf), the next 4 overwrite saved EBP (also padding), and bytes 13-16 are the address you want EIP to jump to — written little-endian, of course (see lesson 13).',
+      solution: `Use p_len = 16 to write through buf (8 bytes) + saved EBP (4 bytes) + reach the saved return address (4 bytes).
+
+Padding before the return-address slot: 12 bytes total (8 in buf + 4 clobbering saved EBP) that are not your chosen target address — often treated as filler when you only care about overwriting EIP.`,
+    },
+  },
+
+  // ── Lesson 15 ─────────────────────────────────────────────────────────────────
+  {
+    id: 15,
+    title: 'Shellcode — Defensive Framing',
+    intro: `In defensive courses, "shellcode" usually means machine bytes an attacker hopes the CPU will execute after control flow is redirected (for example via a return-address overwrite, lesson 14). This site is for learning and authorized lab work only: never aim techniques at systems you do not own or lack explicit permission to test. The sample below does not jump into data or perform I/O — it only walks a few opaque bytes so you can practice reading memory the way analysts inspect unknown blobs.`,
+    concepts: [
+      { name: 'Opaque bytes vs. execution', desc: 'The same bytes can live in .data as inert data, or end up in an executable mapping where a jump could treat them as instructions. Defenders care about both representation and permissions.' },
+      { name: 'Common constraints (conceptual)', desc: 'Historically, payloads had to avoid certain byte values (for example 0x00 in C-string sinks), fit tight space, or avoid hard-coded addresses. Modern mitigations change which constraints matter.' },
+      { name: 'DEP / W^X', desc: 'Data pages marked non-executable reduce "execute what you wrote" primitives; attackers then chain ROP/JOP or find executable regions instead of a single contiguous buffer.' },
+      { name: 'ASLR', desc: 'Randomized load addresses make hard-coded jump targets unreliable; leaks and partial overwrites become part of the story.' },
+      { name: 'What this lesson omits on purpose', desc: 'No target-specific payloads, no step-by-step exploitation walkthroughs, and no "weaponized" encodings — only vocabulary and a benign memory walk.' },
+    ],
+    diagram: `
+  Two views of the same bytes (conceptual)
+
+  Analyst / defensive view              Attacker goal (NOT demonstrated here)
+  ───────────────────────               ─────────────────────────────────────
+  .data:  [B0][B1][B2][B3]              Overflow → RET → EIP points somewhere
+          read / compare / hash         dangerous only if CPU *executes* bytes
+          always legal in your lab      you do not have permission to try on
+          with permission               real targets — do not do that.
+
+  Lesson 14: who gets overwritten        This lesson: naming mitigations + reading bytes`,
+    code: `section .data
+    ; Opaque sample bytes for inspection only (not jumped to, not "live" payload).
+    blob db 0x0A, 0x1E, 0x2D, 0x3C
+
+section .text
+global _start
+
+_start:
+    ; Walk the four bytes like a tiny static analysis exercise.
+    xor  eax, eax
+    mov  esi, blob
+    mov  al, [esi]        ; first byte
+    mov  bl, [esi+1]
+    mov  cl, [esi+2]
+    mov  dl, [esi+3]
+    ; EAX..EDX now hold the individual bytes in AL..DL for easy reading.
+
+    ; Sum them — harmless arithmetic on the same material.
+    add  eax, ebx
+    add  eax, ecx
+    add  eax, edx       ; EAX = sum of the four byte values
+
+    hlt`,
+    exercise: {
+      prompt: 'Without changing the blob, predict EAX after the three ADD instructions (sum of 0x0A + 0x1E + 0x2D + 0x3C in decimal or hex). Run to verify. Then name two mitigations from the Key Concepts list that complicate turning a buffer overwrite into executed machine bytes.',
+      hint: '0x0A + 0x1E + 0x2D + 0x3C = 10 + 30 + 45 + 60 = 145 = 0x91. Mitigations: DEP/W^X and ASLR are the headline pair; stack canaries (lesson 14) also block naive overwrites.',
+      solution: `Sum: 0x0A + 0x1E + 0x2D + 0x3C = 145 decimal = 0x91 hex (low byte of EAX after the three adds; upper bytes depend on prior xor eax,eax so EAX = 0x91).
+
+Two mitigations that complicate execute-from-overflow: DEP/W^X (non-executable data pages) and ASLR (unpredictable addresses). Stack canaries (lesson 14) also detect sequential overwrites before RET.`,
     },
   },
 ];

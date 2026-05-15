@@ -399,6 +399,8 @@ window.showPlayground = function () {
   document.getElementById('main-layout').style.display = 'none';
   document.getElementById('gym-wrap').style.display    = 'none';
   document.getElementById('quiz-wrap').style.display   = 'none';
+  const rankWrap = document.getElementById('rank-wrap');
+  if (rankWrap) rankWrap.style.display = 'none';
   pgWrap.style.display = 'grid';
   pgInitEditor();
   setTimeout(() => pgCm?.refresh(), 0);

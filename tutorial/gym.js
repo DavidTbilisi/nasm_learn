@@ -660,6 +660,8 @@ window.showGym = () => {
   document.getElementById('gym-wrap').style.display   = 'flex';
   document.getElementById('main-layout').style.display = 'none';
   document.getElementById('quiz-wrap').style.display  = 'none';
+  const rankWrap = document.getElementById('rank-wrap');
+  if (rankWrap) rankWrap.style.display = 'none';
   gymMenu();
 };
 window.hideGym = () => {
@@ -669,3 +671,6 @@ window.hideGym = () => {
   document.getElementById('gym-wrap').style.display   = 'none';
   document.getElementById('main-layout').style.display = 'grid';
 };
+
+// Shared drill generators for Rank adaptive mode (loads after gym.js)
+window.__GYM_DRILL_KIT = { DRILLS, rnd, pick, shuf, gymRun };

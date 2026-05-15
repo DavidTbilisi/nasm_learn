@@ -457,6 +457,8 @@ function startQuiz() {
 
 window.showQuiz = function () {
   mainLayout.style.display = 'none';
+  const rankWrap = document.getElementById('rank-wrap');
+  if (rankWrap) rankWrap.style.display = 'none';
   quizWrap.style.display   = 'flex';
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   quizTabBtn.classList.add('active');

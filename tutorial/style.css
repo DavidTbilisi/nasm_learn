@@ -464,7 +464,15 @@ header h1::after {
   color: var(--p-dim);
 }
 
-#hint-btn {
+.exercise-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+#hint-btn,
+#solution-btn {
   align-self: flex-start;
   background: transparent;
   border: 1px solid var(--border);
@@ -477,7 +485,8 @@ header h1::after {
   text-transform: uppercase;
   transition: color 0.1s, border-color 0.1s, text-shadow 0.1s;
 }
-#hint-btn:hover {
+#hint-btn:hover,
+#solution-btn:hover {
   color: var(--p);
   border-color: var(--p);
   text-shadow: var(--glow-sm);
@@ -491,6 +500,22 @@ header h1::after {
   border-top: 1px solid var(--border);
   padding-top: 8px;
   line-height: 1.6;
+}
+
+.solution-box {
+  margin: 0;
+  font-size: 14px;
+  color: var(--p);
+  font-family: var(--mono);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 10px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* ── Right panel ───────────────────────────────────────────────────────────── */
@@ -675,6 +700,7 @@ header h1::after {
   justify-content: space-between;
   gap: 4px;
   transition: all 0.1s;
+  cursor: help;
 }
 
 .flag-set {
@@ -697,6 +723,23 @@ header h1::after {
 
 .flag-name { font-weight: 400; }
 .flag-val  { font-size: 12px; opacity: 0.8; }
+
+/* Floating tooltip for #flag-bar (appended to body) */
+#flag-tooltip.flag-tooltip {
+  position: fixed;
+  z-index: 10050;
+  max-width: 280px;
+  padding: 10px 12px;
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--p);
+  background: var(--surface2);
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
 
 /* ── Stack panel ───────────────────────────────────────────────────────────── */
 #stack-panel {
@@ -1741,8 +1784,10 @@ body[data-theme="cyberpunk"] #concepts-list li  { font-size: 13px; }
 body[data-theme="cyberpunk"] .concept-desc    { font-size: 12px; }
 body[data-theme="cyberpunk"] .section-label   { font-size: 11px; }
 body[data-theme="cyberpunk"] #exercise-box    { font-size: 13px; }
-body[data-theme="cyberpunk"] #hint-btn        { font-size: 12px; letter-spacing: 0.1em; clip-path: none; }
+body[data-theme="cyberpunk"] #hint-btn,
+body[data-theme="cyberpunk"] #solution-btn    { font-size: 12px; letter-spacing: 0.1em; clip-path: none; }
 body[data-theme="cyberpunk"] #hint-box        { font-size: 13px; }
+body[data-theme="cyberpunk"] .solution-box    { font-size: 12px; }
 body[data-theme="cyberpunk"] .exercise-card::before { font-size: 10px; letter-spacing: 0.14em; }
 
 /* ── Concepts: amber is now magenta ────────────────────────────────────────── */
@@ -2074,9 +2119,12 @@ body[data-theme="academic"] .exercise-card { background: var(--surface2); border
 body[data-theme="academic"] .exercise-card::before { color: var(--p-vdim); background: var(--surface2); }
 body[data-theme="academic"] #exercise-box { font-size: 14px; color: var(--p-dim); }
 
-body[data-theme="academic"] #hint-btn { font-size: 13px; text-transform: none; }
-body[data-theme="academic"] #hint-btn:hover { color: var(--amber); border-color: var(--amber); text-shadow: none; }
+body[data-theme="academic"] #hint-btn,
+body[data-theme="academic"] #solution-btn { font-size: 13px; text-transform: none; }
+body[data-theme="academic"] #hint-btn:hover,
+body[data-theme="academic"] #solution-btn:hover { color: var(--amber); border-color: var(--amber); text-shadow: none; }
 body[data-theme="academic"] #hint-box { color: var(--amber); text-shadow: none; font-size: 14px; }
+body[data-theme="academic"] .solution-box { color: var(--p); text-shadow: none; font-size: 13px; border-color: var(--border); }
 
 /* ── State panel headers ───────────────────────────────────────────────────── */
 body[data-theme="academic"] .state-header {
@@ -2421,3 +2469,194 @@ body[data-theme="academic"] #pg-snippets:hover { border-color: var(--amber); col
 body[data-theme="academic"] #pg-error-banner   { background: var(--red-dim); color: var(--red); }
 body[data-theme="academic"] #pg-editor-host .CodeMirror { background: var(--screen); color: var(--p); }
 body[data-theme="academic"] .tab-btn.playground-tab.active { background: var(--amber); color: #fff; border-color: var(--amber); }
+
+/* ── Rank (placement + adaptive practice) ───────────────────────────────────── */
+.rank-wrap {
+  display: none;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rank-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rank-main-col {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 28px 32px;
+}
+
+.rank-title {
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--p);
+  text-shadow: var(--glow-sm);
+  margin: 0 0 12px;
+  letter-spacing: 0.02em;
+}
+
+.rank-lead {
+  font-size: 16px;
+  color: var(--p-dim);
+  line-height: 1.55;
+  max-width: 720px;
+  margin: 0 0 20px;
+}
+
+.rank-muted { color: var(--p-vdim); font-size: 15px; }
+
+.rank-tier-badge {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px solid var(--border-hi);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rank-tier-bronze  { color: #c9a227; border-color: #c9a227; }
+.rank-tier-silver { color: #b8c4d9; border-color: #b8c4d9; }
+.rank-tier-gold   { color: #e8c547; border-color: #e8c547; text-shadow: 0 0 8px rgba(232,197,71,0.35); }
+.rank-tier-platinum { color: var(--p); border-color: var(--p); }
+
+.rank-tier-bronze, .rank-tier-silver, .rank-tier-gold, .rank-tier-platinum { font-weight: 400; }
+
+.rank-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  max-width: 900px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 800px) {
+  .rank-grid-2 { grid-template-columns: 1fr; }
+}
+
+.rank-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.rank-card-wide { max-width: 900px; }
+
+.rank-card h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--p-dim);
+}
+
+.rank-list { margin: 0; padding-left: 18px; color: var(--p-dim); line-height: 1.6; }
+
+.rank-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+.rank-lesson-bank { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+.rank-progress { margin: 12px 0 20px; max-width: 640px; }
+
+.rank-q-meta { margin-bottom: 8px; }
+
+.rank-tag {
+  display: inline-block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+}
+
+.rank-question {
+  font-size: 20px;
+  color: var(--p);
+  line-height: 1.5;
+  max-width: 720px;
+  margin: 0 0 12px;
+}
+
+.rank-code {
+  background: var(--screen);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.65;
+  max-width: 720px;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.rank-mc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-width: 720px;
+}
+
+.rank-type-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  max-width: 720px;
+}
+
+.rank-nav { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+.rank-help-row { display: flex; gap: 8px; margin: 10px 0; }
+
+.rank-hint-box,
+.rank-sol-box {
+  max-width: 720px;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--p-dim);
+  margin: 0 0 12px;
+}
+
+.rank-practice-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.rank-rec {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--p-dim);
+}
+
+.tab-btn.rank-tab.active { color: var(--screen); background: var(--p); text-shadow: var(--glow-sm); }
+
+body[data-theme="cyberpunk"] .tab-btn.rank-tab.active {
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--p);
+  border-color: var(--p);
+}
+
+body[data-theme="academic"] .tab-btn.rank-tab.active {
+  background: var(--amber);
+  color: #fff;
+  border-color: var(--amber);
+  text-shadow: none;
+}
