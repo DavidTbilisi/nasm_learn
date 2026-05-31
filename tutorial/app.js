@@ -316,6 +316,8 @@ tabBtns.forEach((btn, i) => {
       window.hideQuiz?.();
       window.hidePlayground?.();
       window.hideRank?.();
+      window.hideArcade?.();
+      window.hideFoundry?.();
       window.showGym?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
@@ -324,6 +326,8 @@ tabBtns.forEach((btn, i) => {
       window.hideGym?.();
       window.hidePlayground?.();
       window.hideRank?.();
+      window.hideArcade?.();
+      window.hideFoundry?.();
       window.showQuiz?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
@@ -332,6 +336,8 @@ tabBtns.forEach((btn, i) => {
       window.hideGym?.();
       window.hideQuiz?.();
       window.hideRank?.();
+      window.hideArcade?.();
+      window.hideFoundry?.();
       window.showPlayground?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
@@ -340,7 +346,29 @@ tabBtns.forEach((btn, i) => {
       window.hideGym?.();
       window.hideQuiz?.();
       window.hidePlayground?.();
+      window.hideArcade?.();
+      window.hideFoundry?.();
       window.showRank?.();
+      tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
+      return;
+    }
+    if (btn.classList.contains('arcade-tab')) {
+      window.hideGym?.();
+      window.hideQuiz?.();
+      window.hidePlayground?.();
+      window.hideRank?.();
+      window.hideFoundry?.();
+      window.showArcade?.();
+      tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
+      return;
+    }
+    if (btn.classList.contains('foundry-tab')) {
+      window.hideGym?.();
+      window.hideQuiz?.();
+      window.hidePlayground?.();
+      window.hideRank?.();
+      window.hideArcade?.();
+      window.showFoundry?.();
       tabBtns.forEach((b, j) => b.classList.toggle('active', j === i));
       return;
     }
@@ -348,6 +376,8 @@ tabBtns.forEach((btn, i) => {
     window.hideQuiz?.();
     window.hidePlayground?.();
     window.hideRank?.();
+    window.hideArcade?.();
+    window.hideFoundry?.();
     loadLesson(i);
   });
 });
@@ -359,6 +389,8 @@ window.goToLessonTab = lessonIdx => {
   window.hideGym?.();
   window.hideQuiz?.();
   window.hidePlayground?.();
+  window.hideArcade?.();
+  window.hideFoundry?.();
   const tabs = document.querySelectorAll('.tab-btn');
   const btn = tabs[lessonIdx];
   if (btn) btn.click();

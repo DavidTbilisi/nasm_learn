@@ -1,0 +1,801 @@
+/* ── Arcade — game picker → level picker → level workspace ─────────────── */
+
+#arcade-wrap {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 110px);
+  padding: 16px 20px;
+  gap: 14px;
+  color: var(--p);
+  font-family: var(--mono);
+}
+
+#arcade-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#arcade-breadcrumb {
+  font-size: 18px;
+  color: var(--p-hi);
+  letter-spacing: 0.05em;
+}
+
+.arcade-empty {
+  color: var(--p-dim);
+  font-style: italic;
+  padding: 20px;
+}
+
+/* ── Game picker cards ─────────────────────────────────────────────────── */
+
+.arcade-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  align-content: start;
+  overflow-y: auto;
+}
+
+.arcade-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--p);
+  font-family: var(--mono);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.05s;
+  text-align: left;
+}
+.arcade-card:hover {
+  border-color: var(--border-hi);
+  background: var(--surface2);
+}
+.arcade-card:active { transform: translateY(1px); }
+
+.arcade-card-name {
+  font-size: 18px;
+  color: var(--p-hi);
+  letter-spacing: 0.05em;
+}
+.arcade-card-blurb { color: var(--p); font-size: 14px; }
+.arcade-card-progress {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--p-dim);
+}
+
+/* ── Level picker ──────────────────────────────────────────────────────── */
+
+.arcade-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  align-content: start;
+  overflow-y: auto;
+}
+
+.arcade-level {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--p);
+  font-family: var(--mono);
+  cursor: pointer;
+  text-align: left;
+}
+.arcade-level:hover {
+  border-color: var(--border-hi);
+  background: var(--surface2);
+}
+
+.lvl-title {
+  font-size: 15px;
+  color: var(--p-hi);
+}
+.lvl-teaches {
+  font-size: 12px;
+  color: var(--p-dim);
+  letter-spacing: 0.04em;
+}
+.lvl-par   { font-size: 12px; color: var(--p-dim); margin-top: 4px; }
+.lvl-best  { font-size: 12px; color: var(--amber); margin-top: 4px; }
+
+/* ── Level workspace ───────────────────────────────────────────────────── */
+
+#arcade-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) 1fr;
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+}
+
+#arcade-brief {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#arcade-intro {
+  margin: 0;
+  color: var(--p);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.arcade-actions {
+  display: flex;
+  gap: 8px;
+}
+.arcade-actions button {
+  background: var(--surface2);
+  color: var(--p);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-family: var(--mono);
+  cursor: pointer;
+  font-size: 12px;
+}
+.arcade-actions button:hover { border-color: var(--border-hi); }
+.arcade-actions button:disabled { opacity: 0.45; cursor: default; }
+
+.arcade-hint {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-left: 2px solid var(--amber);
+  color: var(--p);
+  font-size: 13px;
+}
+
+/* Override the global .solution-box defaults when used inside #arcade-brief:
+   make it stand out (amber bar) and let it show in full so the player
+   doesn't have to scroll inside the box. */
+#arcade-brief .solution-box {
+  background: var(--surface2);
+  border-left: 3px solid var(--amber);
+  max-height: none;
+  font-size: 12.5px;
+  color: var(--p);
+}
+
+#arcade-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+#arcade-world-section {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 36vh;
+  overflow-y: auto;
+}
+#arcade-world-section .state-header {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-dim);
+}
+
+#arcade-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#arcade-step-counter {
+  color: var(--p-dim);
+  font-size: 13px;
+}
+
+.arcade-error {
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.arcade-status {
+  min-height: 24px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--p-dim);
+  border: 1px solid transparent;
+}
+.arcade-status.pass {
+  background: var(--surface2);
+  border-color: var(--p-dim);
+  color: var(--p-hi);
+}
+.arcade-status.pass.under-par {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.arcade-status.fail {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+#arcade-editor-host {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+#arcade-editor-host .CodeMirror {
+  height: 100%;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+/* ── Belt visual ───────────────────────────────────────────────────────── */
+
+.arcade-world {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.belt-section, .bins-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.belt-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--p-dim);
+  text-transform: uppercase;
+}
+
+.belt-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-height: 32px;
+}
+
+.belt-cell {
+  display: inline-block;
+  min-width: 26px;
+  text-align: center;
+  padding: 3px 6px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  color: var(--p-hi);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.belt-cell.consumed {
+  background: transparent;
+  border-color: var(--p-vdim);
+  color: var(--p-dim);
+  text-decoration: line-through;
+}
+
+.belt-arrow {
+  color: var(--amber);
+  font-size: 16px;
+  margin: 0 4px;
+}
+
+.belt-empty {
+  color: var(--p-dim);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.bins-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.bin {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bin-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--p-dim);
+  text-transform: uppercase;
+}
+
+.bin-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-height: 28px;
+  align-items: flex-start;
+}
+
+.bin-cell {
+  display: inline-block;
+  min-width: 26px;
+  text-align: center;
+  padding: 3px 6px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  color: var(--p-hi);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.bin-empty {
+  color: var(--p-dim);
+  font-style: italic;
+  font-size: 12px;
+  align-self: center;
+}
+
+/* ── Signal Tower visuals ──────────────────────────────────────────────── */
+
+.signal-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-height: 32px;
+  font-family: var(--mono);
+}
+
+.signal-cell {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  color: var(--p-hi);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.signal-cell.consumed {
+  background: transparent;
+  border-color: var(--p-vdim);
+  color: var(--p-dim);
+  text-decoration: line-through;
+}
+.signal-cell.emitted {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.signal-out {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-height: 32px;
+}
+
+/* ── Belt: SVG conveyor + crates + hopper bins ─────────────────────────── */
+
+.belt-svg-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 4px;
+  overflow-x: auto;
+}
+.belt-svg { display: block; min-width: 100%; }
+.crate { vertical-align: middle; filter: drop-shadow(0 1px 0 rgba(0,0,0,0.4)); }
+.crate.consumed { opacity: 0.55; }
+
+.bins-svg {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+.bin-svg-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bin-svg-wrap .bin-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--p-dim);
+  text-transform: uppercase;
+}
+.bin-svg-wrap svg { display: block; }
+
+/* ── Signal: bit grids + tower ─────────────────────────────────────────── */
+
+.signal-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  align-items: start;
+}
+.signal-tower {
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 8px;
+}
+.tower-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+}
+.tower-svg { display: block; }
+
+.frame-stack {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.frame-stack.outbound { border-color: var(--amber); }
+
+.frame-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+.frame-row.consumed { opacity: 0.5; }
+.frame-row.out { background: rgba(255, 176, 0, 0.06); }
+
+.frame-hex {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--p-hi);
+  white-space: nowrap;
+}
+.frame-hex.consumed { color: var(--p-dim); text-decoration: line-through; }
+.frame-hex.out      { color: var(--amber); }
+
+.bits { display: block; flex-shrink: 0; }
+
+/* ── Rover Grid ───────────────────────────────────────────────────────── */
+
+.rover-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 8px;
+}
+.rover-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--p-hi);
+  padding: 4px 6px;
+  background: var(--surface2);
+  border-left: 2px solid var(--amber);
+}
+.rover-readout .ro-label {
+  color: var(--p-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+.rover-grid-wrap {
+  display: flex;
+  justify-content: center;
+  background: var(--surface2);
+  padding: 6px;
+  border: 1px solid var(--border);
+}
+.rover-svg { display: block; max-width: 320px; }
+
+/* ── Courier ──────────────────────────────────────────────────────────────── */
+
+.courier-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: ui-monospace, monospace;
+}
+.courier-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.courier-label {
+  font-size: 10.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--p-dim);
+}
+.courier-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 6px;
+  max-height: 16vh;
+  overflow-y: auto;
+}
+.courier-stack .env-svg { display: block; }
+.courier-bins {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 6px;
+}
+.courier-bins .bin-svg { display: block; width: 100%; height: auto; }
+
+/* ── Heist ───────────────────────────────────────────────────────────────── */
+
+.heist-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: ui-monospace, monospace;
+}
+.heist-label {
+  font-size: 10.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--p-dim);
+}
+.heist-msg {
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px dashed var(--border);
+  color: var(--p-dim);
+  font-size: 11.5px;
+}
+.heist-readout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  font-size: 11.5px;
+  color: var(--p);
+}
+.heist-readout .ro-label {
+  color: var(--p-dim);
+  margin-right: 6px;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.4px;
+}
+.heist-readout .warn { color: var(--red); margin-left: 4px; }
+.heist-readout .ok   { color: var(--p-hi); margin-left: 4px; }
+.heist-stack-wrap {
+  display: flex;
+  justify-content: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 4px;
+  max-height: 28vh;
+  overflow-y: auto;
+}
+.heist-stack { display: block; }
+
+/* ── Arcade universal HUD — regs/flags + memory ribbon ──────────────────── */
+/* Sits below the per-game world panel; shows live CPU state with a
+   change-flash so the user can SEE each instruction's effect. */
+
+.arcade-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 5px 6px;
+  font-family: var(--mono);
+  flex: 0 0 auto;
+}
+.hud-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: center;
+  min-width: 0;
+}
+.hud-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-dim);
+  margin-right: 2px;
+}
+.reg-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.reg-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 1px 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  min-width: 0;
+}
+.reg-name {
+  font-size: 9px;
+  color: var(--p-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.reg-val {
+  font-size: 10.5px;
+  color: var(--p-hi);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.flag-row {
+  display: inline-flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.flag-led {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 1px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+.flag-led.off {
+  color: var(--p-dim);
+  background: var(--surface);
+}
+.flag-led.on {
+  color: #111;
+  background: var(--amber);
+  border-color: var(--amber);
+  box-shadow: 0 0 4px rgba(255, 176, 0, 0.45);
+}
+.mem-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 5px;
+  min-width: 0;
+}
+.mem-strip.dim .mem-byte.zero { opacity: 0.32; }
+.mem-region-label {
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  color: var(--p-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.mem-bytes {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 1px;
+  overflow-x: auto;
+}
+.mem-byte {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 2px;
+  font-size: 9.5px;
+  text-align: center;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  color: var(--p);
+  font-variant-numeric: tabular-nums;
+}
+.mem-byte.zero { color: var(--p-dim); background: var(--surface2); }
+.mem-empty { font-size: 10px; color: var(--p-dim); font-style: italic; }
+
+/* Change-flash: a brief amber pulse that fires on every render where the
+   element is freshly tagged .changed. Because the HUD rebuilds innerHTML
+   each render, the animation replays naturally. */
+@keyframes hud-flash {
+  0%   { background: var(--amber); color: #111; transform: scale(1.08); box-shadow: 0 0 6px var(--amber); }
+  60%  { background: var(--amber); color: #111; transform: scale(1.04); box-shadow: 0 0 3px var(--amber); }
+  100% { transform: scale(1); }
+}
+.reg-cell.changed .reg-val { animation: hud-flash 0.65s ease-out; border-radius: 2px; padding: 0 2px; }
+.flag-led.changed          { animation: hud-flash 0.65s ease-out; }
+.mem-byte.changed          { animation: hud-flash 0.7s ease-out; }
+
+/* ── Continuous per-game flourishes (CSS-only, no diffing needed) ──────── */
+
+/* Signal Tower: radar arms slowly pulse when active (low opacity → high). */
+@keyframes radar-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+.tower-svg g[stroke] { animation: radar-pulse 1.8s ease-in-out infinite; }
+
+/* Rover: subtle glow halo so it reads as "alive" even when idle. */
+@keyframes rover-breathe {
+  0%, 100% { filter: drop-shadow(0 0 1px var(--amber)); }
+  50%      { filter: drop-shadow(0 0 5px var(--amber)); }
+}
+.rover-svg g[transform*="translate"] { animation: rover-breathe 2.4s ease-in-out infinite; }
+
+/* Status banner: when a level passes, briefly celebrate. */
+@keyframes status-celebrate {
+  0%   { transform: translateX(0); box-shadow: 0 0 0 rgba(255,176,0,0); }
+  20%  { transform: translateX(-2px); }
+  40%  { transform: translateX(2px); }
+  60%  { transform: translateX(-1px); box-shadow: 0 0 8px rgba(255,176,0,0.6); }
+  100% { transform: translateX(0); box-shadow: 0 0 0 rgba(255,176,0,0); }
+}
+.arcade-status.pass.under-par { animation: status-celebrate 0.7s ease-out; }
+
+/* Belt: latest crate in each bin pops in (last-child of the column). */
+@keyframes crate-pop {
+  0%   { transform: translateY(-6px) scale(0.85); opacity: 0; }
+  60%  { transform: translateY(1px)  scale(1.05); opacity: 1; }
+  100% { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+.bin-svg-wrap svg g:last-of-type .crate.bin { animation: crate-pop 0.28s ease-out; transform-origin: 50% 50%; }
+
+/* Courier: newest envelope in a bin gets a brief amber underline pulse via
+   the wrap's border-bottom flash. Keep subtle. */
+@keyframes bin-glow {
+  0%, 100% { stroke-opacity: 1; }
+  50%      { stroke-opacity: 0.55; }
+}
+.courier-bins .bin-svg rect[stroke="var(--p-hi)"] { animation: bin-glow 1.6s ease-in-out infinite; }

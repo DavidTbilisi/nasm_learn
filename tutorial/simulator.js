@@ -14,6 +14,92 @@ class NASMSimulator {
     this.halted = false;
     this.stdout = [];    // lines written by sys_write
     this.exitCode = null;
+    this.lastError = null;
+    // syscallTable + loaded program preserved across reset() — see loadProgram.
+    if (!this.syscallTable) this.syscallTable = {};
+    if (this._program === undefined) this._program = null;
+  }
+
+  // ── Resumable execution (Foundry uses this; runAll is for one-shot runs) ────
+
+  loadProgram(code) {
+    // Parse + reset state + position IP at _start. Program stays loaded across
+    // reset() so subsequent runTicks() calls keep advancing from current IP.
+    let parsed;
+    try { parsed = this.parse(code); }
+    catch (e) { this._program = null; this.lastError = e.message; return { error: e.message }; }
+    this._program = parsed;
+    this.reset();
+    this._program = parsed; // reset() nulled it; restore.
+    this.ip = parsed.labels['_start'] ?? 0;
+    return { ok: true, instructions: parsed.instructions, labels: parsed.labels };
+  }
+
+  runTicks(n) {
+    if (!this._program) return { steps: 0, halted: this.halted };
+    const { instructions, labels } = this._program;
+    let steps = 0;
+    while (steps < n && this.ip < instructions.length && !this.halted) {
+      const instr = instructions[this.ip];
+      const { op, args } = instr;
+      try {
+        if (op === 'jmp') {
+          const t = labels[args[0]];
+          if (t === undefined) throw new Error(`Unknown label: ${args[0]}`);
+          this.ip = t; steps++; continue;
+        }
+        const CONDS = ['je','jz','jne','jnz','jg','jnle','jge','jnl',
+                       'jl','jnge','jle','jng','ja','jnbe','jae','jnb',
+                       'jb','jnae','jbe','jna','js','jns'];
+        if (CONDS.includes(op)) {
+          const taken = this._condMet(op);
+          this.ip = taken ? (labels[args[0]] ?? (() => { throw new Error(`Unknown label: ${args[0]}`); })()) : this.ip+1;
+          steps++; continue;
+        }
+        if (op === 'loop') {
+          this.regs.ecx = (this.regs.ecx-1)>>>0;
+          const taken = this.regs.ecx !== 0;
+          this.ip = taken ? (labels[args[0]] ?? this.ip+1) : this.ip+1;
+          steps++; continue;
+        }
+        if (op === 'loope' || op === 'loopz') {
+          this.regs.ecx = (this.regs.ecx-1)>>>0;
+          const taken = this.regs.ecx !== 0 && this.flags.zf === 1;
+          this.ip = taken ? (labels[args[0]] ?? this.ip+1) : this.ip+1;
+          steps++; continue;
+        }
+        if (op === 'loopne' || op === 'loopnz') {
+          this.regs.ecx = (this.regs.ecx-1)>>>0;
+          const taken = this.regs.ecx !== 0 && this.flags.zf === 0;
+          this.ip = taken ? (labels[args[0]] ?? this.ip+1) : this.ip+1;
+          steps++; continue;
+        }
+        if (op === 'call') {
+          const t = labels[args[0]];
+          if (t === undefined) throw new Error(`Unknown label: ${args[0]}`);
+          this.regs.esp = (this.regs.esp-4)>>>0;
+          this.writeDword(this.regs.esp, this.ip+1);
+          this.callStack.push(this.ip+1);
+          this.ip = t; steps++; continue;
+        }
+        if (op === 'ret') {
+          const retAddr = this.readDword(this.regs.esp);
+          this.regs.esp = (this.regs.esp+4)>>>0;
+          if (retAddr === undefined || this.callStack.length === 0) { this.halted = true; break; }
+          this.callStack.pop();
+          this.ip = retAddr; steps++; continue;
+        }
+        this._exec(instr, labels);
+        this.ip++; steps++;
+        if (this.halted) break;
+      } catch (e) {
+        this.lastError = e.message;
+        this.halted = true;
+        break;
+      }
+    }
+    if (this.ip >= instructions.length) this.halted = true;
+    return { steps, halted: this.halted, error: this.lastError };
   }
 
   // ── Byte-level memory helpers ────────────────────────────────────────────────
@@ -453,11 +539,14 @@ class NASMSimulator {
           this.regs.esp = (this.regs.esp+4)>>>0;
         } break;
 
-      // int — Linux x86 syscalls (int 0x80)
+      // int — Linux x86 syscalls (int 0x80). Custom handlers (e.g. arcade games)
+      // register on this.syscallTable[eax] and take precedence over built-ins.
       case 'int': {
         const vec = g(0);
         if (vec !== 0x80) break;
         const syscall = this.regs.eax;
+        const custom = this.syscallTable && this.syscallTable[syscall];
+        if (custom) { custom(this); break; }
         if (syscall === 1) {                          // sys_exit
           this.exitCode = this.regs.ebx;
           this.halted = true;
@@ -526,7 +615,7 @@ class NASMSimulator {
 
   // ── Run all and return history ────────────────────────────────────────────────
 
-  runAll(code) {
+  runAll(code, opts) {
     this.reset();
     let parsed;
     try { parsed = this.parse(code); }
@@ -537,7 +626,7 @@ class NASMSimulator {
 
     this.ip = labels['_start'] ?? 0;
     const history = [];
-    const MAX = 500;
+    const MAX = (opts && opts.maxSteps) || 500;
 
     const snap = () => ({
       regs: { ...this.regs },

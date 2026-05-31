@@ -9,6 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Orbitron:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="games/styles.css">
+  <link rel="stylesheet" href="foundry/styles.css">
 </head>
 <body data-theme="retro">
 
@@ -34,6 +36,8 @@
     <button class="tab-btn gym-tab">🏋 Gym</button>
     <button class="tab-btn playground-tab">▷ Playground</button>
     <button class="tab-btn rank-tab">◇ Rank</button>
+    <button class="tab-btn arcade-tab">🎮 Arcade</button>
+    <button class="tab-btn foundry-tab">🏭 Foundry</button>
   </div>
   <button id="theme-btn" class="btn btn-secondary theme-toggle" title="Switch theme">CYBER ◈</button>
 </header>
@@ -234,6 +238,92 @@
   </div>
 </div>
 
+<!-- ── Arcade layout ────────────────────────────────────────────────────────── -->
+<div id="arcade-wrap" style="display:none">
+  <header id="arcade-header">
+    <button id="arcade-back" class="btn btn-secondary" style="display:none">← Back</button>
+    <div id="arcade-breadcrumb">🎮 Arcade</div>
+  </header>
+
+  <!-- Game picker -->
+  <div id="arcade-picker" class="arcade-picker"></div>
+
+  <!-- Level picker -->
+  <div id="arcade-levels" class="arcade-levels" style="display:none"></div>
+
+  <!-- Level workspace -->
+  <div id="arcade-workspace" style="display:none">
+    <aside id="arcade-brief">
+      <p id="arcade-intro"></p>
+      <div class="arcade-actions">
+        <button id="arcade-hint-btn" type="button">Show hint</button>
+        <button id="arcade-solution-btn" type="button">Show solution</button>
+      </div>
+      <p id="arcade-hint" class="arcade-hint" style="display:none"></p>
+      <pre id="arcade-solution" class="solution-box" style="display:none"></pre>
+    </aside>
+    <div id="arcade-main">
+      <div id="arcade-world-section">
+        <div class="state-header">World</div>
+        <div id="arcade-world" class="arcade-world"></div>
+      </div>
+      <div id="arcade-hud" class="arcade-hud"></div>
+      <div id="arcade-toolbar">
+        <button id="arcade-run" class="btn btn-primary">Run ▶</button>
+        <button id="arcade-step" class="btn btn-secondary">Step ▸</button>
+        <button id="arcade-back-step" class="btn btn-secondary" disabled>◂ Back</button>
+        <button id="arcade-reset" class="btn btn-secondary">Reset ↺</button>
+        <span id="arcade-step-counter"></span>
+      </div>
+      <div id="arcade-error" class="arcade-error" style="display:none"></div>
+      <div id="arcade-status" class="arcade-status"></div>
+      <div id="arcade-editor-host"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Foundry layout (endless sandbox / factory mode) ──────────────────────── -->
+<div id="foundry-wrap" style="display:none">
+  <header id="foundry-header">
+    <div id="foundry-title">🏭 Foundry</div>
+    <div id="foundry-controls">
+      <button id="foundry-run"   class="btn btn-primary"  >Run ▶</button>
+      <button id="foundry-pause" class="btn btn-secondary" disabled>Pause ⏸</button>
+      <button id="foundry-step"  class="btn btn-secondary">Step ▸</button>
+      <button id="foundry-reset" class="btn btn-secondary">Reset ↺</button>
+      <label class="foundry-speed-wrap">Speed
+        <select id="foundry-speed">
+          <option value="1">1×</option>
+          <option value="4" selected>4×</option>
+          <option value="16">16×</option>
+          <option value="64">64×</option>
+        </select>
+      </label>
+      <span class="foundry-sep"></span>
+      <button id="foundry-export" class="btn btn-secondary" title="Download world JSON">Export</button>
+      <button id="foundry-import" class="btn btn-secondary" title="Load world JSON">Import</button>
+      <input  id="foundry-import-file" type="file" accept="application/json" style="display:none">
+      <button id="foundry-clear"  class="btn btn-secondary" title="Empty the world">Clear</button>
+    </div>
+  </header>
+
+  <div id="foundry-body">
+    <aside id="foundry-palette"></aside>
+
+    <div id="foundry-canvas">
+      <div id="foundry-grid"></div>
+      <svg id="foundry-wires" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <aside id="foundry-drawer"></aside>
+  </div>
+
+  <div id="foundry-footer">
+    <div id="foundry-badges" class="foundry-badges"></div>
+    <div id="foundry-status" class="foundry-status"></div>
+  </div>
+</div>
+
 <!-- ── Quiz layout ──────────────────────────────────────────────────────────── -->
 <div id="quiz-wrap">
   <div id="quiz-sidebar">
@@ -279,5 +369,17 @@
 <script src="playground.js"></script>
 <script src="resize.js"></script>
 <script src="theme.js"></script>
+<script src="games/belt.js"></script>
+<script src="games/signal.js"></script>
+<script src="games/rover.js"></script>
+<script src="games/courier.js"></script>
+<script src="games/heist.js"></script>
+<script src="games/registry.js"></script>
+<script src="games/host.js"></script>
+<script src="foundry/puzzles.js"></script>
+<script src="foundry/machines.js"></script>
+<script src="foundry/world.js"></script>
+<script src="foundry/milestones.js"></script>
+<script src="foundry/host.js"></script>
 </body>
 </html>

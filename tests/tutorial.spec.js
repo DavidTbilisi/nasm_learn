@@ -56,9 +56,9 @@ test.describe('Page basics', () => {
     await expect(page.locator('.CodeMirror-code')).toContainText('mov eax, 42');
   });
 
-  test('all 19 tabs render (15 lessons + quiz + gym + playground + rank)', async ({ page }) => {
+  test('all 21 tabs render (15 lessons + quiz + gym + playground + rank + arcade + foundry)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.tab-btn')).toHaveCount(19);
+    await expect(page.locator('.tab-btn')).toHaveCount(21);
   });
 });
 
@@ -516,5 +516,265 @@ test.describe('Gym', () => {
 
     await page.keyboard.press('a');
     await expect(page.locator('#gym-feedback')).not.toHaveClass(/hidden/);
+  });
+});
+
+// ── Arcade — Belt Foreman ────────────────────────────────────────────────────
+
+test.describe('Arcade', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab-btn.arcade-tab').click();
+  });
+
+  test('clicking arcade tab shows arcade wrap, hides main layout', async ({ page }) => {
+    await expect(page.locator('#arcade-wrap')).toBeVisible();
+    await expect(page.locator('#main-layout')).not.toBeVisible();
+  });
+
+  test('picker lists Belt Foreman', async ({ page }) => {
+    await expect(page.locator('#arcade-picker')).toContainText('Belt Foreman');
+  });
+
+  test('opening Belt Foreman shows level list', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="belt"]').click();
+    await expect(page.locator('#arcade-levels')).toBeVisible();
+    await expect(page.locator('.arcade-level')).toHaveCount(6);
+    await expect(page.locator('.arcade-level').first()).toContainText('Drain');
+  });
+
+  test('opening a level shows the editor and the belt world', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="belt"]').click();
+    await page.locator('.arcade-level').first().click();
+    await expect(page.locator('#arcade-workspace')).toBeVisible();
+    await expect(page.locator('#arcade-editor-host .CodeMirror')).toBeVisible();
+    await expect(page.locator('#arcade-world .belt-svg')).toBeVisible();
+    // Initial belt should show the level-1 byte sequence.
+    await expect(page.locator('#arcade-world')).toContainText('10');
+    await expect(page.locator('#arcade-world')).toContainText('50');
+  });
+
+  test('level 1 reference solution validates as complete', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="belt"]').click();
+    await page.locator('.arcade-level').first().click();
+    // Load the canonical solution into the editor via the exposed CodeMirror.
+    await page.evaluate(() => {
+      const level = window.BeltGame.levels[0];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+    await expect(page.locator('#arcade-status')).toContainText('Level complete');
+  });
+
+  test('empty program fails validation', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="belt"]').click();
+    await page.locator('.arcade-level').first().click();
+    await page.evaluate(() => {
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue('section .text\nglobal _start\n_start:\n  mov eax, 1\n  xor ebx, ebx\n  int 0x80\n');
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/fail/);
+    await expect(page.locator('#arcade-status')).toContainText('Bin 0 should');
+  });
+
+  test('Step button advances one instruction at a time and updates the world', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="belt"]').click();
+    await page.locator('.arcade-level').first().click();
+    await page.evaluate(() => {
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(`_start:
+  mov eax, 0x100
+  int 0x80
+  mov eax, 1
+  xor ebx, ebx
+  int 0x80
+`);
+    });
+    // 2 steps: mov eax, 0x100; int 0x80  → after the int the belt cursor moves.
+    await page.click('#arcade-step');
+    await page.click('#arcade-step');
+    await expect(page.locator('#arcade-step-counter')).toContainText('step 2');
+    // Back step disables when stepping all the way back to 0.
+    await page.click('#arcade-back-step');
+    await page.click('#arcade-back-step');
+    await expect(page.locator('#arcade-back-step')).toBeDisabled();
+  });
+
+  test('switching from arcade back to a lesson restores main layout', async ({ page }) => {
+    await page.locator('.tab-btn').first().click();
+    await expect(page.locator('#main-layout')).toBeVisible();
+    await expect(page.locator('#arcade-wrap')).not.toBeVisible();
+  });
+
+  test('picker lists Signal Tower', async ({ page }) => {
+    await expect(page.locator('#arcade-picker')).toContainText('Signal Tower');
+  });
+
+  test('Signal Tower level 1 reference solution validates as complete', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="signal"]').click();
+    await page.locator('.arcade-level').first().click();
+    await page.evaluate(() => {
+      const level = window.SignalGame.levels[0];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+    await expect(page.locator('#arcade-status')).toContainText('Level complete');
+  });
+
+  test('Signal Tower level 4 (byte swap) reference solution validates', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="signal"]').click();
+    await page.locator('.arcade-level').nth(3).click();
+    await page.evaluate(() => {
+      const level = window.SignalGame.levels[3];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+  });
+
+  test('picker lists Rover Grid', async ({ page }) => {
+    await expect(page.locator('#arcade-picker')).toContainText('Rover Grid');
+  });
+
+  test('Rover Grid level 1 reference solution validates as complete', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="rover"]').click();
+    await page.locator('.arcade-level').first().click();
+    await expect(page.locator('#arcade-world .rover-svg')).toBeVisible();
+    await page.evaluate(() => {
+      const level = window.RoverGame.levels[0];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+    await expect(page.locator('#arcade-status')).toContainText('Level complete');
+  });
+
+  test('Rover Grid level 4 (scan detour) reference solution validates', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="rover"]').click();
+    await page.locator('.arcade-level').nth(3).click();
+    await page.evaluate(() => {
+      const level = window.RoverGame.levels[3];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+  });
+
+  test('picker lists String Courier', async ({ page }) => {
+    await expect(page.locator('#arcade-picker')).toContainText('String Courier');
+  });
+
+  test('String Courier level 1 reference solution validates', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="courier"]').click();
+    await page.locator('.arcade-level').first().click();
+    await expect(page.locator('#arcade-world .courier-wrap')).toBeVisible();
+    await page.evaluate(() => {
+      const level = window.CourierGame.levels[0];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+  });
+
+  test('String Courier level 4 (reverse) reference solution validates', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="courier"]').click();
+    await page.locator('.arcade-level').nth(3).click();
+    await page.evaluate(() => {
+      const level = window.CourierGame.levels[3];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+  });
+
+  test('String Courier level 5 (dedupe) reference solution validates', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="courier"]').click();
+    await page.locator('.arcade-level').nth(4).click();
+    await page.evaluate(() => {
+      const level = window.CourierGame.levels[4];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+  });
+
+  test('picker lists Heap Heist', async ({ page }) => {
+    await expect(page.locator('#arcade-picker')).toContainText('Heap Heist');
+  });
+
+  test('Heap Heist level 1 (CALL/RET) reference solution validates', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="heist"]').click();
+    await page.locator('.arcade-level').first().click();
+    await expect(page.locator('#arcade-world .heist-wrap')).toBeVisible();
+    await page.evaluate(() => {
+      const level = window.HeistGame.levels[0];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+  });
+
+  test('Heap Heist level 4 (return-address rewrite) validates', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="heist"]').click();
+    await page.locator('.arcade-level').nth(3).click();
+    await page.evaluate(() => {
+      const level = window.HeistGame.levels[3];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+  });
+
+  test('Heap Heist level 5 (recursive factorial) validates with balanced stack', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="heist"]').click();
+    await page.locator('.arcade-level').nth(4).click();
+    await page.evaluate(() => {
+      const level = window.HeistGame.levels[4];
+      const cm = document.querySelector('#arcade-editor-host .CodeMirror').CodeMirror;
+      cm.setValue(level.solution);
+    });
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/pass/);
+  });
+
+  test('Heap Heist rejects empty program (validator sees wrong exit code)', async ({ page }) => {
+    await page.locator('.arcade-card[data-game="heist"]').click();
+    await page.locator('.arcade-level').first().click();
+    await page.click('#arcade-run');
+    await expect(page.locator('#arcade-status')).toHaveClass(/fail/);
+  });
+
+  test('built-in sys_write still works (regression: syscallTable does not shadow eax=4)', async ({ page }) => {
+    await page.locator('.tab-btn').first().click();
+    await page.evaluate(() => window.cmEditor.setValue(
+      `section .data
+msg db 'hi', 0
+section .text
+global _start
+_start:
+  mov eax, 4
+  mov ebx, 1
+  mov ecx, msg
+  mov edx, 2
+  int 0x80
+  mov eax, 1
+  xor ebx, ebx
+  int 0x80`
+    ));
+    await page.click('#btn-run');
+    await expect(page.locator('#stack-panel')).toContainText('hi');
   });
 });
