@@ -85,9 +85,20 @@
         <button id="btn-prev"  class="btn btn-secondary" disabled>◀ Prev</button>
         <button id="btn-reset" class="btn btn-secondary">Reset ↺</button>
         <span id="step-counter"></span>
+        <div id="code-view" role="group" aria-label="Code view">
+          <button class="btn btn-secondary" data-view="asm" aria-pressed="true">ASM</button>
+          <button class="btn btn-secondary" data-view="split" aria-pressed="false">ASM | C</button>
+          <button class="btn btn-secondary" data-view="c" aria-pressed="false">C</button>
+        </div>
       </div>
       <div id="error-banner"></div>
-      <div id="editor-host"></div>
+      <div id="code-panes" data-view="asm">
+        <div id="editor-host"></div>
+        <div id="c-pane">
+          <div id="c-pane-label">C version of the lesson example · read-only</div>
+          <div id="c-host"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ② Drag handle — editor height -->
@@ -360,6 +371,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
 <script src="simulator.js"></script>
 <script src="lessons.js"></script>
 <script src="nasm-mode.js"></script>

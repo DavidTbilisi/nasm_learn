@@ -53,7 +53,7 @@ test.describe('Page basics', () => {
 
   test('editor is populated with lesson code', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.CodeMirror-code')).toContainText('mov eax, 42');
+    await expect(page.locator('#editor-host .CodeMirror-code')).toContainText('mov eax, 42');
   });
 
   test('all 21 tabs render (15 lessons + quiz + gym + playground + rank + arcade + foundry)', async ({ page }) => {
@@ -85,7 +85,7 @@ test.describe('Tab navigation', () => {
     await page.goto('/');
     await page.locator('.tab-btn').nth(1).click();
     await expect(page.locator('#lesson-title')).toContainText('Arithmetic');
-    await expect(page.locator('.CodeMirror-code')).toContainText('add eax, ebx');
+    await expect(page.locator('#editor-host .CodeMirror-code')).toContainText('add eax, ebx');
   });
 
   test('clicking lesson 5 loads loops content', async ({ page }) => {
@@ -799,5 +799,51 @@ test.describe('Walkthrough explainer', () => {
       await expect(xp.locator('.xp-meta')).toHaveText(/^Step 1 \//);
     }
     expect(errors).toEqual([]);
+  });
+});
+
+// ── ASM / C view toggle ───────────────────────────────────────────────────────
+
+test.describe('ASM / C view', () => {
+  test.beforeEach(async ({ page }) => { await page.goto('/'); });
+
+  test('defaults to ASM only', async ({ page }) => {
+    await expect(page.locator('#editor-host')).toBeVisible();
+    await expect(page.locator('#c-pane')).not.toBeVisible();
+    await expect(page.locator('#code-view [data-view="asm"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('split shows ASM and C side by side', async ({ page }) => {
+    await page.click('#code-view [data-view="split"]');
+    await expect(page.locator('#editor-host')).toBeVisible();
+    await expect(page.locator('#c-pane')).toBeVisible();
+    const asm = await page.locator('#editor-host').boundingBox();
+    const c   = await page.locator('#c-pane').boundingBox();
+    expect(c.x).toBeGreaterThan(asm.x);   // C is to the right
+  });
+
+  test('C view hides ASM and shows the lesson in C', async ({ page }) => {
+    await page.click('#code-view [data-view="c"]');
+    await expect(page.locator('#editor-host')).not.toBeVisible();
+    await expect(page.locator('#c-host')).toContainText('int main');
+    await expect(page.locator('#c-host')).toContainText('mov eax, 42');   // lesson 1 maps each line
+  });
+
+  test('C pane follows the selected lesson', async ({ page }) => {
+    await page.click('#code-view [data-view="split"]');
+    await page.locator('.tab-btn').nth(3).click();                       // lesson 4: square()
+    await expect(page.locator('#c-host')).toContainText('uint32_t square(uint32_t x)');
+  });
+
+  test('every lesson has a C version', async ({ page }) => {
+    const missing = await page.evaluate(() => LESSONS.filter(l => !l.c).map(l => l.id));
+    expect(missing).toEqual([]);
+  });
+
+  test('choice survives a reload', async ({ page }) => {
+    await page.click('#code-view [data-view="c"]');
+    await page.reload();
+    await expect(page.locator('#code-view [data-view="c"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#editor-host')).not.toBeVisible();
   });
 });

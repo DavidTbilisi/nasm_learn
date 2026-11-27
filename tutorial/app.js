@@ -28,6 +28,26 @@ const solutionBox  = document.getElementById('solution-box');
 const solutionBtn  = document.getElementById('solution-btn');
 const tabBtns      = document.querySelectorAll('.tab-btn');
 const stepCounter  = document.getElementById('step-counter');
+
+// ── ASM / C view toggle ───────────────────────────────────────────────────────
+// The C pane shows each lesson's hand-written C version (lesson.c), read-only.
+const VIEW_KEY   = 'nasm-code-view';
+const codePanes  = document.getElementById('code-panes');
+const cView      = CodeMirror(document.getElementById('c-host'), {
+  mode: 'text/x-csrc', theme: 'nasm-dark', lineNumbers: true, readOnly: true, viewportMargin: Infinity,
+});
+function setCodeView(view) {
+  if (!['asm', 'split', 'c'].includes(view)) view = 'asm';
+  codePanes.dataset.view = view;
+  document.querySelectorAll('#code-view [data-view]').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  try { localStorage.setItem(VIEW_KEY, view); } catch (_) {}
+  cm.refresh();      // CodeMirror mis-measures after display:none, so re-measure both
+  cView.refresh();
+}
+document.querySelectorAll('#code-view [data-view]').forEach(b =>
+  b.addEventListener('click', () => setCodeView(b.dataset.view)));
+setCodeView((() => { try { return localStorage.getItem(VIEW_KEY); } catch (_) { return null; } })());
 const errorBanner  = document.getElementById('error-banner');
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -308,6 +328,7 @@ function loadLesson(idx) {
   solutionBtn.style.opacity = lesson.exercise.solution ? '' : '0.45';
 
   cm.setValue(lesson.code.trim());
+  cView.setValue(lesson.c ?? '// No C version for this lesson yet.');
   cm.clearHistory();
   doReset();
 }

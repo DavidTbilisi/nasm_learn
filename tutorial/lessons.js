@@ -32,6 +32,22 @@ _start:
     mov edx, -1        ; EDX = 0xFFFFFFFF (all bits set)
     xor esi, esi       ; ESI = 0  (XOR with self clears a register)
     hlt`,
+    c: `#include <stdint.h>
+
+// Registers become variables. uint32_t = exactly 32 bits, like EAX.
+int main(void) {
+    uint32_t eax, ebx, ecx, edx, esi;
+
+    eax = 42;                            // mov eax, 42
+    ebx = eax;                           // mov ebx, eax   (a copy: 42)
+    ecx = 0xFF;                          // mov ecx, 0xFF  (255)
+    eax = (eax & 0xFFFFFF00) | 0xAB;     // mov al, 0xAB   only bits 0-7 change
+    eax = (eax & 0xFFFF00FF) | 0x0100;   // mov ah, 0x01   only bits 8-15 change
+    // eax is now 0x000001AB
+    edx = -1;                            // mov edx, -1    (0xFFFFFFFF)
+    esi = 0;                             // xor esi, esi
+    return 0;                            // hlt
+}`,
     exercise: {
       prompt: 'Modify the code so that EBX ends up holding the value 100 and ECX ends up holding 200. Then set EDX to the sum of EBX and ECX using ADD.',
       hint: 'Use MOV to load the constants, then ADD edx, ecx after setting both.',
@@ -89,6 +105,34 @@ _start:
 
     xor eax, eax   ; clear EAX (ZF=1 after this)
     hlt`,
+    c: `#include <stdint.h>
+
+int main(void) {
+    uint32_t eax, ebx, ecx, edx;
+
+    eax = 10;
+    ebx = 20;
+    eax += ebx;          // add eax, ebx   -> 30
+    eax -= 5;            // sub eax, 5     -> 25
+    eax++;               // inc eax        -> 26
+    ebx--;               // dec ebx        -> 19
+
+    // MUL: the full product is 64 bits, split as EDX (high) : EAX (low)
+    eax = 6;
+    ecx = 7;
+    uint64_t product = (uint64_t)eax * ecx;   // mul ecx
+    eax = (uint32_t)product;                  // 42
+    edx = (uint32_t)(product >> 32);          // 0
+
+    // Overflow: biggest uint32 + 1 wraps around to 0
+    eax = 0xFFFFFFFF;
+    uint32_t before = eax;
+    eax += 1;            // add eax, 1 -> 0
+    int cf = eax < before;   // C has no flags: you test for the carry yourself (CF=1)
+
+    eax = 0;             // xor eax, eax
+    return 0;
+}`,
     exercise: {
       prompt: 'Write code that computes 3 × (10 + 5) and leaves the final product in EAX. Use ADD for the sum and MUL for the product.',
       hint: 'ADD eax, 5 first (after setting EAX=10), then MOV ecx, 3 and MUL ecx.',
@@ -148,6 +192,27 @@ is_less:
     mov edx, 1     ; EDX = 1  (EBX < 10)
 done:
     hlt`,
+    c: `#include <stdint.h>
+
+int main(void) {
+    uint32_t eax, ebx, ecx, edx;
+
+    // Sum 1+2+3+4+5. LOOP = "ecx--, jump back if ecx != 0"
+    ecx = 5;
+    eax = 0;
+    do {
+        eax += ecx;           // sum_loop: add eax, ecx
+    } while (--ecx != 0);     // loop sum_loop
+    // eax = 15
+
+    // jl compares as SIGNED, so the C version casts to int32_t
+    ebx = 7;
+    if ((int32_t)ebx < 10)    // cmp ebx, 10 / jl is_less
+        edx = 1;              // is_less: mov edx, 1
+    else
+        edx = 0;              // mov edx, 0 / jmp done
+    return 0;
+}`,
     exercise: {
       prompt: 'Write a loop that multiplies EAX by 2 exactly 4 times, starting from EAX=1. Use ADD eax, eax (doubling trick) inside the loop body.',
       hint: 'Set ECX=4 as the loop counter. Each iteration: ADD eax, eax. After the loop EAX should be 16.',
@@ -200,6 +265,19 @@ square:            ; returns argument² in EAX
     imul eax, eax       ; EAX = EAX²
     pop  ebp
     ret`,
+    c: `#include <stdint.h>
+
+// cdecl: the argument arrives on the stack at [ebp+8], the result goes back in EAX
+uint32_t square(uint32_t x) {    // push ebp / mov ebp, esp
+    return x * x;                // mov eax, [ebp+8] / imul eax, eax
+}                                // pop ebp / ret
+
+int main(void) {
+    // The compiler writes the push / call / add esp for you
+    uint32_t eax = square(7);    // push 7 / call square / add esp, 4
+    // eax = 49
+    return 0;
+}`,
     exercise: {
       prompt: 'Add a second subroutine called "add_two" that takes two arguments and returns their sum in EAX. Call it with arguments 13 and 27. The result should be 40.',
       hint: 'Push the second argument first, then the first (right-to-left). Inside add_two: [EBP+8] is arg1, [EBP+12] is arg2.',
@@ -283,6 +361,38 @@ inner_loop:
     loop outer_loop        ; ESI = 12
 
     hlt`,
+    c: `#include <stdint.h>
+
+int main(void) {
+    uint32_t eax, ebx, ecx, edx, esi;
+
+    // 1. Counted loop: sum 1..10
+    ecx = 10;
+    eax = 0;
+    do {
+        eax += ecx;                  // count_loop: add eax, ecx
+    } while (--ecx != 0);            // loop count_loop      -> eax = 55
+
+    // 2. While loop: halve ebx until it is < 4
+    ebx = 64;
+    while ((int32_t)ebx >= 4)        // cmp ebx, 4 / jl while_done
+        ebx >>= 1;                   // shr ebx, 1           -> ebx = 2
+
+    // 3. Do-while: count up to 5 (the test is at the bottom)
+    edx = 0;
+    do {
+        edx++;                       // inc edx
+    } while ((int32_t)edx < 5);      // cmp edx, 5 / jl do_top -> edx = 5
+
+    // 4. Nested: 3 x 4 = 12 iterations
+    // asm has ONE ecx, so it push/pops it around the inner loop; C just uses two variables
+    esi = 0;
+    for (ecx = 3; ecx != 0; ecx--)               // outer_loop
+        for (uint32_t inner = 4; inner != 0; inner--)   // inner_loop
+            esi++;                               // inc esi
+    // esi = 12
+    return 0;
+}`,
     exercise: {
       prompt: 'Write a loop that computes 2^8 (2 to the power of 8) and stores the result in EAX. Start with EAX=1 and double it 8 times using ADD eax, eax inside a counted loop.',
       hint: 'Set ECX=8, EAX=1. Each iteration: ADD eax, eax. After the loop EAX should be 256.',
@@ -358,6 +468,18 @@ _start:
 section .data
     msg2     db 'Goodbye!', 0x0A
     msg2_len equ $ - msg2`,
+    c: `#include <unistd.h>
+
+const char msg[]  = "Hello, World!\\n";   // section .data
+const char msg2[] = "Goodbye!\\n";
+char buf[64];                            // section .bss: 64 zeroed bytes
+
+int main(void) {
+    // write() and _exit() are thin wrappers: they load the registers and do int 0x80
+    write(1, msg, sizeof msg - 1);    // eax=4 sys_write, ebx=1 stdout, ecx=msg, edx=msg_len
+    write(1, msg2, sizeof msg2 - 1);  // sizeof - 1: C adds a NUL the asm string doesn't have
+    _exit(0);                         // eax=1 sys_exit, ebx=0
+}`,
     exercise: {
       prompt: 'Change the program to print your own message instead of "Hello, World!". Then exit with code 42 instead of 0. Watch the stdout panel and exit code update.',
       hint: 'Edit the string after db (keep the quotes and trailing 0x0A for the newline). Change MOV EBX, 0 to MOV EBX, 42 before sys_exit. Update msg_len if your string length changed — or let equ recompute it automatically.',
@@ -460,6 +582,26 @@ _start:
     ; ESI-1 points to 'H', EDI-1 points to 'W'
 
     hlt`,
+    c: `#include <string.h>
+
+char src[] = "Hello";     // 6 bytes including the NUL
+char pat[] = "World";
+char dst[16];             // section .bss
+
+int main(void) {
+    // 1. memcpy = rep movsb: copy ecx bytes from [esi] to [edi]
+    memcpy(dst, src, 6);
+
+    // 2. strlen = repne scasb: scan for AL (0), count the steps
+    size_t eax = strlen(src);          // 5
+
+    // 3. memset = rep stosb: store AL ecx times
+    memset(dst, '*', 5);
+
+    // 4. memcmp = repe cmpsb: compare until the first mismatch
+    int diff = memcmp(src, pat, 6);    // != 0: 'H' vs 'W' differ (ZF=0)
+    return 0;
+}`,
     exercise: {
       prompt: 'Add a second string "Hello" in .data and use REPE CMPSB to compare it against src. After the loop, check ZF: if strings are equal ZF=1. Watch the flags panel — ZF should be 1 this time.',
       hint: 'Declare: copy db \'Hello\', 0. Then MOV ESI, src / MOV EDI, copy / MOV ECX, 6 / REPE CMPSB. Equal strings leave ZF=1.',
@@ -560,6 +702,49 @@ _start:
     bts  eax, 0            ; set   bit 0    → EAX = 0b10100101, CF=0
 
     hlt`,
+    c: `#include <stdint.h>
+
+int main(void) {
+    uint32_t eax, ebx, ecx, edx;
+
+    // AND: keep only the low byte (mask)
+    eax = 0xDEADBEEF;
+    eax &= 0x000000FF;                 // and -> 0xEF
+
+    // OR: set bits 4 and 5
+    ebx = 0x0A;                        // 0b00001010
+    ebx |= 0x30;                       // 0b00110000 -> 0x3A
+
+    // XOR: toggle bits, or zero a register
+    ecx = 0xCC;                        // 0b11001100
+    ecx ^= 0xAA;                       // 0b10101010 -> 0x66
+    ecx ^= ecx;                        // xor ecx, ecx -> 0
+
+    // NOT: flip every bit
+    edx = 0x0F0F0F0F;
+    edx = ~edx;                        // -> 0xF0F0F0F0
+
+    // SHL / SHR: on an UNSIGNED value << and >> are shl / shr
+    eax = 7;
+    eax <<= 3;                         // 7 x 2^3 = 56
+    eax >>= 1;                         // 28
+
+    // SAR: >> on a SIGNED value keeps the sign (gcc and clang emit sar)
+    int32_t s = -32;
+    s >>= 2;                           // -8
+
+    // ROL / ROR: C has no rotate operator; compilers turn this pattern into one rol/ror
+    eax = 0x80000001;
+    eax = (eax << 1) | (eax >> 31);    // rol eax, 1 -> 0x00000003
+    eax = (eax >> 4) | (eax << 28);    // ror eax, 4 -> 0x30000000
+
+    // BT / BTR / BTS: test, clear, set one bit
+    eax = 0xB4;                        // 0b10110100
+    int cf = (eax >> 4) & 1;           // bt  eax, 4 -> 1
+    eax &= ~(1u << 4);                 // btr eax, 4 -> 0b10100100
+    eax |= 1u << 0;                    // bts eax, 0 -> 0b10100101
+    return 0;
+}`,
     exercise: {
       prompt: 'Write code that packs two 4-bit values (nibbles) into one byte in EAX. Put the value 0xA into the high nibble and 0x5 into the low nibble. The result should be EAX = 0xA5. Use SHL to shift the first value, then OR to combine.',
       hint: 'MOV eax, 0xA / SHL eax, 4 → EAX = 0xA0. Then OR eax, 0x5 → EAX = 0xA5.',
@@ -636,6 +821,42 @@ _start:
     lea  eax, [eax+eax*2]    ; EAX = 7 + 7×2 = 21  (no MUL needed)
 
     hlt`,
+    c: `#include <stdint.h>
+
+uint32_t val = 99;                         // val dd 99
+uint32_t arr[] = {10, 20, 30, 40, 50};     // arr dd 10, 20, 30, 40, 50
+
+int main(void) {
+    uint32_t eax, ecx;
+    uint32_t *ebx, *edi;                   // registers holding addresses = pointers
+
+    // 1. Direct
+    eax = val;                 // mov eax, [val]          -> 99
+    val = 42;                  // mov dword [val], 42
+
+    // 2. Register-indirect
+    ebx = &arr[0];             // lea ebx, [arr]
+    eax = *ebx;                // mov eax, [ebx]          -> 10
+    ebx++;                     // add ebx, 4: C scales by sizeof(uint32_t) for you
+    eax = *ebx;                // mov eax, [ebx]          -> 20
+
+    // 3. Base + offset: byte offset 8 = index 2, 12 = index 3
+    eax = arr[2];              // mov eax, [arr+8]        -> 30
+    eax = arr[3];              // mov eax, [arr+12]       -> 40
+
+    // 4. Scaled index: the *4 is the element size
+    ecx = 4;
+    eax = arr[ecx];            // mov eax, [arr+ecx*4]    -> 50
+
+    // 5. LEA = & (address only, no read)
+    edi = &arr[ecx];           // lea edi, [arr+ecx*4]
+    eax = *edi;                // mov eax, [edi]          -> 50
+
+    // 6. LEA as a cheap multiply
+    eax = 7;
+    eax = eax + eax * 2;       // lea eax, [eax+eax*2]    -> 21
+    return 0;
+}`,
     exercise: {
       prompt: 'Load arr[4] (value 50) into EBX using scaled-index addressing. Then use LEA to compute the address of arr[4] and store it in ECX. Verify by reading [ECX] — it should equal EBX.',
       hint: 'MOV esi, 4 / MOV ebx, [arr+esi*4] for the value. LEA ecx, [arr+esi*4] for the address. MOV eax, [ecx] — EAX should be 50.',
@@ -734,6 +955,35 @@ is_negative:
     mov  ebx, 1            ; EBX = 1  (EAX is negative)
 sign_done:
     hlt`,
+    c: `#include <stdint.h>
+
+int main(void) {
+    // Same bits, different meaning: the TYPE picks the instruction
+    uint32_t eax = 0xFFFFFFFF;    // -1 as int32_t, 4294967295 as uint32_t
+    eax += 1;                     // add eax, 1 -> 0, same instruction for both
+
+    // IMUL: signed multiply
+    int32_t a = -6, c = 7;
+    a = a * c;                    // imul eax, ecx       -> -42
+    int32_t b = c * -5;           // imul ebx, ecx, -5   -> -35
+
+    // IDIV: / and % on int32_t. cdq is how the CPU sign-extends EAX into EDX first
+    int32_t q = -17 / 5;          // cdq / idiv ecx -> EAX = -3 (rounds toward zero)
+    int32_t r = -17 % 5;          //                   EDX = -2
+    q = 100 / 7;                  // 14
+    r = 100 % 7;                  // 2
+
+    // SAR vs SHR: signed >> is sar, unsigned >> is shr
+    int32_t  s = -32;
+    s >>= 2;                      // sar -> -8
+    uint32_t u = (uint32_t)-32;
+    u >>= 2;                      // shr -> 0x3FFFFFF8
+
+    // Signed comparison: int32_t makes the compiler use jl (unsigned would use jb)
+    int32_t v = -5;
+    int32_t ebx = (v < 0) ? 1 : 0;   // cmp eax, 0 / jl is_negative -> 1
+    return 0;
+}`,
     exercise: {
       prompt: 'Compute (-100) ÷ (-3) using CDQ and IDIV. What are the quotient (EAX) and remainder (EDX)? Hint: the mathematically correct answer has EAX = 33.',
       hint: 'MOV eax, -100 / CDQ / MOV ecx, -3 / IDIV ecx. Expected: EAX = 33, EDX = -1 (because 33 × (-3) = -99, and -100 − (-99) = -1).',
@@ -814,6 +1064,25 @@ ad_done:
     mov  esp, ebp        ; release locals
     pop  ebp
     ret`,
+    c: `#include <stdint.h>
+
+// abs_diff(a, b) = |a - b|
+// Arguments live at [ebp+8] and [ebp+12]; locals at [ebp-4] and [ebp-8].
+int32_t abs_diff(int32_t a, int32_t b) {   // push ebp / mov ebp, esp / sub esp, 8
+    int32_t local_a = a;                   // mov [ebp-4], eax
+    int32_t local_b = b;                   // mov [ebp-8], ecx
+    int32_t eax = local_a - local_b;       // sub eax, [ebp-8]
+    if (eax < 0)                           // jns ad_done
+        eax = -eax;                        // neg eax
+    return eax;                            // mov esp, ebp / pop ebp / ret
+}
+
+int main(void) {
+    // Arguments are pushed right-to-left; the caller removes them (add esp, 8)
+    int32_t eax = abs_diff(10, 3);   // push 3 / push 10 / call abs_diff -> 7
+    eax = abs_diff(5, 20);           // push 20 / push 5 / call abs_diff -> 15
+    return 0;
+}`,
     exercise: {
       prompt: 'Write a "clamp(val, lo, hi)" function that returns val if lo ≤ val ≤ hi, lo if val < lo, or hi if val > hi. Call it with (25, 10, 20) — EAX should be 20. Then call it with (5, 10, 20) — EAX should be 10.',
       hint: '[EBP+8]=val, [EBP+12]=lo, [EBP+16]=hi. Load val into EAX. CMP eax, [ebp+12] / JGE check_hi. If below lo: MOV eax, [ebp+12] / JMP done. check_hi: CMP eax, [ebp+16] / JLE done. MOV eax, [ebp+16].',
@@ -930,6 +1199,45 @@ max_next:
     mov  eax, [arr]          ; EAX = 99
 
     hlt`,
+    c: `#include <stdint.h>
+
+uint32_t arr[] = {3, 17, 8, 42, 11};       // arr dd 3, 17, 8, 42, 11
+#define ARRLEN 5                           // arrlen equ 5
+
+int main(void) {
+    uint32_t eax, ebx, ecx, edx, esi;
+    uint32_t *p;
+
+    // 1. Read individual elements
+    eax = arr[0];                          // mov eax, [arr]        -> 3
+    eax = arr[1];                          // mov eax, [arr+4]      -> 17
+    ecx = 2;
+    eax = arr[ecx];                        // mov eax, [arr+ecx*4]  -> 8
+
+    // 2. Sum by walking a pointer
+    eax = 0;
+    p = arr;                               // mov esi, arr
+    for (ecx = ARRLEN; ecx != 0; ecx--) {  // loop sum_loop
+        eax += *p;                         // add eax, [esi]
+        p++;                               // add esi, 4
+    }
+    // eax = 81
+
+    // 3. Maximum. jle is a SIGNED compare, hence the casts
+    ebx = arr[0];                          // current max
+    for (esi = 1; esi < ARRLEN; esi++) {   // ecx counts the arrlen-1 remaining elements
+        edx = arr[esi];                    // mov edx, [arr+esi*4]
+        if ((int32_t)edx > (int32_t)ebx)   // cmp edx, ebx / jle max_next
+            ebx = edx;
+    }
+    // ebx = 42
+
+    // 4. Write an element
+    ecx = 0;
+    arr[ecx] = 99;                         // mov dword [arr+ecx*4], 99
+    eax = arr[0];                          // -> 99
+    return 0;
+}`,
     exercise: {
       prompt: 'After the existing loops, count how many elements are greater than 10 and store the count in EDI. Expected: 3 (the values 17, 42, and 11 are all greater than 10).',
       hint: 'XOR edi, edi / MOV esi, arr / MOV ecx, arrlen. Loop: MOV edx, [esi] / CMP edx, 10 / JLE skip / INC edi. skip: ADD esi, 4 / LOOP ...',
@@ -1038,6 +1346,31 @@ _start:
     ; "Hello" is stored as 48 65 6C 6C 6F across five consecutive addresses.
 
     hlt`,
+    c: `#include <stdint.h>
+
+uint32_t val = 0x11223344;       // val dd 0x11223344
+char text[] = {'H','e','l','l','o'};   // exactly 5 bytes, no NUL, like the asm
+
+int main(void) {
+    // 1. View the same 4 bytes one at a time through a byte pointer
+    uint8_t *bytes = (uint8_t *)&val;
+    uint8_t al = bytes[0];       // mov al, [val]    -> 0x44  lowest address = LOWEST byte
+    uint8_t bl = bytes[1];       // mov bl, [val+1]  -> 0x33
+    uint8_t cl = bytes[2];       // mov cl, [val+2]  -> 0x22
+    uint8_t dl = bytes[3];       // mov dl, [val+3]  -> 0x11
+    uint32_t eax = val;          // mov eax, [val]   -> 0x11223344, the CPU reassembles
+
+    // 2. Same on the stack: a local variable lives there
+    uint32_t pushed = 0xCAFEBABE;               // push 0xCAFEBABE
+    uint8_t *esi = (uint8_t *)&pushed;          // mov esi, esp
+    al = esi[0];                                // -> 0xBE
+    uint8_t ah = esi[1];                        // -> 0xBA
+
+    // 3. Strings are byte arrays: no reversal
+    al = (uint8_t)text[0];       // 'H' (0x48)
+    ah = (uint8_t)text[1];       // 'e'
+    return 0;
+}`,
     exercise: {
       prompt: 'Without running it, predict the value of EAX after this code:\n\n  mov dword [val], 0xAABBCCDD\n  mov al, [val+2]\n  mov ah, [val+1]\n\nThen run the program and check.',
       hint: 'Byte at val+2 = the byte stored two addresses past the start = 0xBB (third byte in memory order). Byte at val+1 = 0xCC. So AL = 0xBB, AH = 0xCC → AX = 0xCCBB.',
@@ -1113,6 +1446,22 @@ vulnerable:
     mov  esp, ebp                  ; epilogue
     pop  ebp
     ret`,
+    c: `#include <string.h>
+
+char payload[] = {'A','A','A','A','A','A','A','A'};   // 8 bytes, no NUL: fills buf exactly
+
+void vulnerable(const char *src) {        // push ebp / mov ebp, esp
+    char buf[8];                          // sub esp, 8 -> buf at [ebp-8]
+    memcpy(buf, src, sizeof payload);     // rep movsb, p_len bytes
+    // C checks nothing either: copy 12 bytes and bytes 9-12 overwrite the saved EBP.
+    // Real compilers add a stack canary (-fstack-protector) to catch that; the asm shows
+    // the raw frame without it.
+}                                         // mov esp, ebp / pop ebp / ret
+
+int main(void) {
+    vulnerable(payload);         // push payload / call vulnerable / add esp, 4
+    return 0;
+}`,
     exercise: {
       prompt: 'Change payload to 12 bytes ("AAAAAAAABBBB"). Step through and watch the stack panel: the BBBB lands exactly on the saved-EBP slot at [ebp+0]. What value would you need at p_len for the overflow to reach the saved return address — and how many bytes BEFORE the return-address bytes would have to be "padding" that you don\'t care about?',
       hint: 'buf is 8 bytes, saved EBP is 4 bytes, so the saved return address sits 12 bytes past the start of buf. To touch it you need p_len = 16. The first 8 bytes are padding (fill buf), the next 4 overwrite saved EBP (also padding), and bytes 13-16 are the address you want EIP to jump to — written little-endian, of course (see lesson 13).',
@@ -1168,6 +1517,22 @@ _start:
     add  eax, edx       ; EAX = sum of the four byte values
 
     hlt`,
+    c: `#include <stdint.h>
+
+// Sample bytes for inspection only: read as data, never executed.
+const uint8_t blob[] = {0x0A, 0x1E, 0x2D, 0x3C};
+
+int main(void) {
+    const uint8_t *esi = blob;   // mov esi, blob
+    // The simulator starts every register at 0, so "mov bl, [esi+1]" fills all of ebx
+    uint32_t eax = esi[0];       // xor eax, eax / mov al, [esi]
+    uint32_t ebx = esi[1];       // mov bl, [esi+1]
+    uint32_t ecx = esi[2];       // mov cl, [esi+2]
+    uint32_t edx = esi[3];       // mov dl, [esi+3]
+
+    eax = eax + ebx + ecx + edx; // add eax, ebx / ecx / edx -> 145
+    return 0;
+}`,
     exercise: {
       prompt: 'Without changing the blob, predict EAX after the three ADD instructions (sum of 0x0A + 0x1E + 0x2D + 0x3C in decimal or hex). Run to verify. Then name two mitigations from the Key Concepts list that complicate turning a buffer overwrite into executed machine bytes.',
       hint: '0x0A + 0x1E + 0x2D + 0x3C = 10 + 30 + 45 + 60 = 145 = 0x91. Mitigations: DEP/W^X and ASLR are the headline pair; stack canaries (lesson 14) also block naive overwrites.',
