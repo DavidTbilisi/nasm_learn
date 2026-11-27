@@ -36,7 +36,12 @@ const codePanes  = document.getElementById('code-panes');
 const cView      = CodeMirror(document.getElementById('c-host'), {
   mode: 'text/x-csrc', theme: 'nasm-dark', lineNumbers: true, readOnly: true, viewportMargin: Infinity,
 });
-const cpu3d = Cpu3D.mount(document.getElementById('cpu-pane'));
+// In 3D view the editor highlight follows the animation: the instruction being replayed.
+const cpu3d = Cpu3D.mount(document.getElementById('cpu-pane'), {
+  onInstr: k => {
+    if (codePanes.dataset.view === 'cpu' && runResult) highlightLine(runResult.history[k].before.ip, runResult.instructions);
+  },
+});
 
 function setCodeView(view) {
   if (!['asm', 'split', 'c', 'cpu'].includes(view)) view = 'asm';
@@ -45,6 +50,11 @@ function setCodeView(view) {
     b.setAttribute('aria-pressed', String(b.dataset.view === view)));
   try { localStorage.setItem(VIEW_KEY, view); } catch (_) {}
   window.refreshLayout?.();   // 3D view has its own editor height
+  if (runResult && stepIndex >= 0) {
+    if (view === 'cpu') cpu3d.update(runResult, stepIndex, false);
+    else if (stepIndex < runResult.history.length - 1) highlightLine(runResult.history[stepIndex].before.ip, runResult.instructions);
+    else clearStepHighlight();
+  }
   cm.refresh();      // CodeMirror mis-measures after display:none, so re-measure both
   cView.refresh();
 }
@@ -235,9 +245,9 @@ function doRun() {
 
   appendLog(`Executed ${runResult.steps} instruction(s).`, 'log-info');
   stepIndex = runResult.history.length - 1;
-  cpu3d.update(runResult, stepIndex, false);
   updateStepCounter();
   clearStepHighlight();
+  cpu3d.update(runResult, stepIndex, false);
   btnPrev.disabled = false;
   btnStep.textContent = 'Restart ↺';
 }
@@ -260,7 +270,6 @@ function doStep() {
 
   renderState(dispState, prevEntry ? prevEntry.before : null);
   highlightLine(entry.before.ip, runResult.instructions);
-  cpu3d.update(runResult, stepIndex, true);
 
   let msg = `[${stepIndex+1}] ${entry.instr.raw}`;
   if (entry.branch) msg += entry.branch.taken ? ` → taken (${entry.branch.target})` : ' → not taken';
@@ -276,6 +285,7 @@ function doStep() {
     renderState(runResult.finalState, entry.before);
     clearStepHighlight();
   }
+  cpu3d.update(runResult, stepIndex, true);
 }
 
 function doPrev() {
