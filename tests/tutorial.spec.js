@@ -437,12 +437,12 @@ test.describe('Gym', () => {
     await page.locator('.tab-btn.gym-tab').click();
   });
 
-  test('gym menu shows 8 workout cards', async ({ page }) => {
-    await expect(page.locator('.gym-card')).toHaveCount(8);
+  test('gym menu shows 9 workout cards', async ({ page }) => {
+    await expect(page.locator('.gym-card')).toHaveCount(9);
   });
 
-  test('first card is Registers workout', async ({ page }) => {
-    await expect(page.locator('.gym-card').first()).toContainText('Registers');
+  test('first card is Hex workout', async ({ page }) => {
+    await expect(page.locator('.gym-card').first()).toContainText('Hex');
   });
 
   test('Full Body card exists', async ({ page }) => {
