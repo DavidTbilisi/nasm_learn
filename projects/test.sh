@@ -18,4 +18,19 @@ check "hexdump binary itself" "$(./hexdump hexdump)" "$(hexdump -Cv hexdump)"
 check "hexdump stdin pipe" "$(cat "$tmp/random" | ./hexdump)" "$(hexdump -Cv "$tmp/random")"
 ./hexdump /nonexistent 2>/dev/null; check "hexdump missing file exits 1" "$?" "1"
 
+# ── brainfuck ──
+check "bf hello world" "$(./brainfuck hello.bf)" "Hello World!"
+printf ',[.[-],]' > "$tmp/cat.bf"
+check "bf cat via stdin" "$(./brainfuck "$tmp/cat.bf" < hexdump.asm | md5sum)" "$(md5sum < hexdump.asm)"
+printf -- '-.' > "$tmp/wrap.bf"
+check "bf cell wraps 0-1=255" "$(./brainfuck "$tmp/wrap.bf" | od -An -tu1 | tr -d ' ')" "255"
+printf 'comments are ignored +++[->++<]>.' > "$tmp/c.bf"
+check "bf loop + comments" "$(./brainfuck "$tmp/c.bf" | od -An -tu1 | tr -d ' ')" "6"
+for bad in '[' ']' '[]]' '<'; do
+  printf '%s' "$bad" > "$tmp/bad.bf"
+  ./brainfuck "$tmp/bad.bf" 2>/dev/null; check "bf rejects '$bad'" "$?" "1"
+done
+head -c 70000 /dev/zero | tr '\0' '+' > "$tmp/big.bf"
+./brainfuck "$tmp/big.bf" 2>/dev/null; check "bf rejects oversized program" "$?" "1"
+
 exit $fail
