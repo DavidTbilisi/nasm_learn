@@ -122,7 +122,7 @@
       <div class="state-section">
         <div class="state-header">Flags</div>
         <div id="flag-bar"></div>
-        <div class="state-header">Stack / stdout</div>
+        <div class="state-header">Stack</div>
         <div class="state-scroll" id="stack-panel"></div>
       </div>
 
@@ -131,6 +131,8 @@
 
       <!-- Execution log -->
       <div class="state-section" id="log-section">
+        <div class="state-header">Output</div>
+        <pre class="output-term" id="output-panel" aria-live="polite"></pre>
         <div class="state-header">Execution Log</div>
         <div class="state-scroll" id="step-log"></div>
       </div>
@@ -206,7 +208,7 @@
     <div id="pg-sidebar-mid">
       <div class="state-header">Flags</div>
       <div id="pg-flag-bar"></div>
-      <div class="state-header">Stack / stdout</div>
+      <div class="state-header">Stack</div>
       <div class="state-scroll" id="pg-stack-panel"></div>
     </div>
   </div>
@@ -232,6 +234,8 @@
     <div id="pg-error-banner"></div>
     <div id="pg-editor-host"></div>
     <div id="pg-log-section">
+      <div class="state-header">Output</div>
+      <pre class="output-term" id="pg-output-panel" aria-live="polite"></pre>
       <div class="state-header">Execution Log</div>
       <div class="state-scroll" id="pg-step-log"></div>
     </div>
