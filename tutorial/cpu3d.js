@@ -19,6 +19,12 @@
   const STACK_TOP = 0x2000;       // simulator's initial ESP
   const PHASE_MS = 900;      // > the 0.6s glide, so each move finishes before the next
 
+  // Hover tooltips: the user's mnemonics for the two stack registers.
+  const TIPS = {
+    esp: 'ESP = Every Single Push. Top of the stack: changes on every push and pop.',
+    ebp: 'EBP = Exact Bookmark Position. Set once when a function starts: arguments at [ebp+…], locals at [ebp-…].',
+  };
+
   const probe = new NASMSimulator();
   const load = st => { probe.regs = { ...st.regs }; probe.mem = st.mem; return probe; };
 
@@ -158,7 +164,7 @@
 
     out.push(SLAB('rs', 0, 0, 8, 2.3));
     for (const [n, [x, y]] of Object.entries(REGS)) {
-      out.push(C('r-' + n, x, y, face(st.regs[n]), { w: 1.8, tone: tone('r-' + n) }));
+      out.push(C('r-' + n, x, y, face(st.regs[n]), { w: 1.8, tone: tone('r-' + n), title: TIPS[n] }));
     }
 
     out.push(SLAB('fs', 0, FY, 4), tiles('ft', 0, FY, 4), labels('fl', 0, FY + 1, FLAGS.map(f => f.toUpperCase())));
@@ -182,13 +188,13 @@
       if (a >= st.regs.esp) out.push(C('st' + a, SX, SY, face(load(st).readDword(a)), { z: i * SH, w: 1.8, d: 1.4, h: SH - 0.04, tone: tone('st' + a) }));
     }
     const espSlot = Math.min(SLOTS, Math.max(0, (STACK_TOP - st.regs.esp) / 4 - ctx.lo));
-    out.push(G('esp-p', SX + 1, SY + 0.7, espSlot * SH, `ESP → ${hex(st.regs.esp)}`, { dx: 0, dy: -30, tone: tone('r-esp') }));
+    out.push(G('esp-p', SX + 1, SY + 0.7, espSlot * SH, `ESP → ${hex(st.regs.esp)}`, { dx: 0, dy: -30, tone: tone('r-esp'), title: TIPS.esp }));
     const ebpSlot = slotOf(ctx, st.regs.ebp);
-    if (ebpSlot >= 0) out.push(G('ebp-p', SX + 0.1, SY + 0.8, (ebpSlot + 1) * SH, 'EBP', { dx: -40, dy: -8, tone: tone('r-ebp') }));
+    if (ebpSlot >= 0) out.push(G('ebp-p', SX + 0.1, SY + 0.8, (ebpSlot + 1) * SH, 'EBP', { dx: -40, dy: -8, tone: tone('r-ebp'), title: TIPS.ebp }));
 
     // Register names last, so the front row's chips are not hidden by the flags and ALU.
     for (const [n, [x, y]] of Object.entries(REGS)) {
-      out.push(y ? G('n-' + n, x + 1, y + 0.9, 0, n.toUpperCase(), { below: true, dy: 20, tone: tone('r-' + n) })
+      out.push(y ? G('n-' + n, x + 1, y + 0.9, 0, n.toUpperCase(), { below: true, dy: 20, tone: tone('r-' + n), title: TIPS[n] })
                  : G('n-' + n, x + 1, y + 0.5, 0.8, n.toUpperCase(), { tone: tone('r-' + n) }));
     }
     if (o.extra) out.push(...o.extra);

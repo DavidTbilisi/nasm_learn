@@ -84,7 +84,8 @@
     const { id, x, y, z, ...rest } = it;
     const shape = SHAPES[it.k](it);
     const pos = it.k === 'arrow' ? [0, 0] : iso(x, y, z ?? 0);
-    return { id, k: it.k, pos, sig: JSON.stringify(rest), html: shape.html, ext: shape.ext.map(([ex, ey]) => [ex + pos[0], ey + pos[1]]) };
+    const tip = it.title ? `<title>${esc(it.title)}</title>` : '';   // native hover tooltip
+    return { id, k: it.k, pos, sig: JSON.stringify(rest), html: tip + shape.html, ext: shape.ext.map(([ex, ey]) => [ex + pos[0], ey + pos[1]]) };
   }
 
   const DEFS = `
