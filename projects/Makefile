@@ -1,7 +1,7 @@
 # Pure-assembly projects: 32-bit Linux, int 0x80 syscalls, no libc.
 #   make          build all
 #   make test     build + check against reference behaviour
-PROGS = hexdump brainfuck life httpd
+PROGS = hexdump brainfuck life httpd snake
 
 all: $(PROGS)
 

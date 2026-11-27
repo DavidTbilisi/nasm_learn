@@ -62,4 +62,16 @@ check "httpd banner" "$(cat "$tmp/httpd.log")" "listening on http://127.0.0.1:$p
 ./httpd $port 2>/dev/null; check "httpd busy port exits 1" "$?" "1"
 kill $pid 2>/dev/null; wait $pid 2>/dev/null
 
+# ── snake: keys piped in (no tty), count frames until the snake hits a wall ──
+# Head starts at x=15,y=8 on a 30x16 board. frames = first draw + 1 per legal move + final draw.
+frames() { printf '%s' "$1" | ./snake | grep -o $'\e\[H' | wc -l; }
+check "snake straight right hits wall" "$(frames '')" "16"     # 14 moves to x=29
+check "snake 'w' turns up"             "$(frames w)" "10"      # 8 moves to y=0
+check "snake U-turn 'a' is ignored"    "$(frames a)" "16"
+check "snake 'wa' in one tick: no U-turn" "$(frames wa)" "10"     # 'a' reverses the last MOVE (right): ignored
+check "snake q quits at once"          "$(frames q)" "1"
+out=$(./snake < /dev/null)
+check "snake prints GAME OVER" "$(grep -c 'GAME OVER' <<<"$out")" "1"
+check "snake restores cursor" "${out: -6}" $'\e[?25h'
+
 exit $fail
