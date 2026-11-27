@@ -778,3 +778,26 @@ _start:
     await expect(page.locator('#stack-panel')).toContainText('hi');
   });
 });
+
+// ── Walkthrough (isometric explainer) ─────────────────────────────────────────
+
+test.describe('Walkthrough explainer', () => {
+  test('every lesson has a walkthrough that steps forward and back', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto('/');
+    const tabs = page.locator('.tab-btn');
+    for (let i = 0; i < 15; i++) {
+      await tabs.nth(i).click();
+      const xp = page.locator('#lesson-explainer');
+      await expect(xp.locator('.xp-meta')).toHaveText(/^Step 1 \/ \d+$/);
+      await expect(xp.locator('.xp-prev')).toBeDisabled();
+      await expect(xp.locator('.xp-layer > g').first()).toBeAttached();
+      await xp.locator('.xp-next').click();
+      await expect(xp.locator('.xp-meta')).toHaveText(/^Step 2 \//);
+      await xp.locator('.xp-prev').click();
+      await expect(xp.locator('.xp-meta')).toHaveText(/^Step 1 \//);
+    }
+    expect(errors).toEqual([]);
+  });
+});

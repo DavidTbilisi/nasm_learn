@@ -2660,3 +2660,88 @@ body[data-theme="academic"] .tab-btn.rank-tab.active {
   border-color: var(--amber);
   text-shadow: none;
 }
+
+/* ── Isometric walkthrough (explainer.js) ─────────────────────────────────── */
+.xp { display: flex; flex-direction: column; gap: 10px; }
+.xp-stage {
+  background: var(--screen);
+  border: 1px solid var(--border);
+  padding: 6px;
+}
+.xp-svg { display: block; width: 100%; height: auto; max-height: 300px; overflow: visible; }
+.xp-floor { opacity: 0.55; }
+#xp-grid path { fill: none; stroke: var(--border); stroke-width: 0.6; }
+#xp-head path { fill: var(--amber); }
+.xp-hatch-bg      { fill: color-mix(in srgb, var(--amber) 18%, var(--screen)); }
+.xp-hatch-ln      { stroke: var(--amber); stroke-width: 1.6; }
+.xp-hatch-bad-bg  { fill: color-mix(in srgb, var(--red) 18%, var(--screen)); }
+.xp-hatch-bad-ln  { stroke: var(--red); stroke-width: 1.6; }
+.xp-hatch-slab-bg { fill: var(--surface3); }
+.xp-hatch-slab-ln { stroke: var(--p-vdim); stroke-width: 1; }
+
+.xp-item { transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.08), opacity 0.35s ease; }
+.xp-svg polygon { stroke: var(--p-dim); stroke-width: 1.1; stroke-linejoin: round; }
+.xp-svg text { font-family: var(--mono); fill: var(--p); text-anchor: middle; dominant-baseline: central; }
+.xp-v { font-weight: 600; }
+.xp-lbl { fill: var(--p-dim) !important; }
+
+/* cube faces: .t top, .l left (value face), .r right */
+.tone-base > .t { fill: var(--surface); }
+.tone-base > .l { fill: var(--surface2); }
+.tone-base > .r { fill: var(--surface3); }
+.tone-hot  > .t { fill: color-mix(in srgb, var(--amber) 32%, var(--screen)); }
+.tone-hot  > .l { fill: color-mix(in srgb, var(--amber) 16%, var(--screen)); }
+.tone-hot  > .r { fill: url(#xp-hatch); }
+.tone-hot  > polygon { stroke: var(--amber); }
+.tone-bad  > .t { fill: color-mix(in srgb, var(--red) 32%, var(--screen)); }
+.tone-bad  > .l { fill: color-mix(in srgb, var(--red) 16%, var(--screen)); }
+.tone-bad  > .r { fill: url(#xp-hatch-bad); }
+.tone-bad  > polygon { stroke: var(--red); }
+.tone-ok   > .t { fill: color-mix(in srgb, var(--p) 26%, var(--screen)); }
+.tone-ok   > .l { fill: color-mix(in srgb, var(--p) 12%, var(--screen)); }
+.tone-ok   > .r { fill: var(--surface3); }
+.tone-ok   > polygon { stroke: var(--p); }
+.tone-dim  { opacity: 0.4; }
+.tone-dim  > .t { fill: var(--surface); }
+.tone-dim  > .l { fill: var(--surface2); }
+.tone-dim  > .r { fill: var(--surface3); }
+.tone-slab > .t { fill: color-mix(in srgb, var(--p) 5%, var(--screen)); }
+.tone-slab > .l { fill: var(--surface3); }
+.tone-slab > .r { fill: url(#xp-hatch-slab); }
+
+/* floor tiles */
+.xp-tile .f { fill: color-mix(in srgb, var(--amber) 7%, transparent); stroke: color-mix(in srgb, var(--amber) 45%, transparent); stroke-width: 0.9; }
+.xp-tile .tone-hot .f { fill: color-mix(in srgb, var(--amber) 28%, transparent); stroke: var(--amber); }
+.xp-tile .tone-dim .f { fill: none; }
+.xp-tile text { fill: var(--p-dim); }
+
+/* chips */
+.xp-chip line   { stroke: var(--p-dim); stroke-width: 1; }
+.xp-chip circle { fill: var(--p-dim); }
+.xp-chip rect   { fill: var(--p); }
+.xp-svg .xp-chip text { fill: var(--screen); font-weight: 600; }
+.xp-chip.tone-hot rect, .xp-chip.tone-hot circle { fill: var(--amber); }
+.xp-chip.tone-bad rect, .xp-chip.tone-bad circle { fill: var(--red); }
+
+/* arrows draw themselves in */
+.xp-arrow path { fill: none; stroke: var(--amber); stroke-width: 1.8; stroke-dasharray: 1; animation: xp-draw 0.6s ease-out both; }
+@keyframes xp-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* step card */
+.xp-card { background: var(--surface2); border: 1px solid var(--border); padding: 10px 12px; }
+.xp-meta { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); }
+.xp-title { font-size: 18px; color: var(--p); margin: 2px 0 6px; }
+.xp-text { font-size: 15px; line-height: 1.5; color: var(--p-dim); margin: 0; }
+.xp-text b { color: var(--p); }
+.xp-code { margin: 8px 0 0; padding: 6px 8px; background: var(--screen); border-left: 2px solid var(--amber); font-family: var(--mono); font-size: 13px; color: var(--p); white-space: pre; overflow-x: auto; }
+
+.xp-nav { display: flex; align-items: center; gap: 8px; }
+.xp-dots { flex: 1; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.xp-dot { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 1px solid var(--p-dim); background: transparent; cursor: pointer; }
+.xp-dot.active { background: var(--amber); border-color: var(--amber); }
+.xp-dot:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-item { transition: none; }
+  .xp-arrow path { animation: none; }
+}

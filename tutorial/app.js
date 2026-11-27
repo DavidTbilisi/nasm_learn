@@ -282,6 +282,8 @@ function loadLesson(idx) {
     `<li><strong>${c.name}</strong><span class="concept-desc">${c.desc}</span></li>`
   ).join('');
 
+  window.renderExplainer?.(document.getElementById('lesson-explainer'), lesson.id);
+
   diagramPre.textContent = lesson.diagram || '';
   diagramPre.style.display = lesson.diagram ? 'block' : 'none';
 
