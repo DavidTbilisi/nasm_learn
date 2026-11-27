@@ -99,6 +99,53 @@
     <marker id="xp-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0L10 5L0 10Z"/></marker>`;
 
+  // ── Stage: animate a layer between flat scenes of built items ─────────────────
+  // Items keep their id across scenes, so one that moves glides; new ones drop in,
+  // missing ones fade out.
+
+  function stage(layer) {
+    const live = new Map();
+    return function show(items) {
+      const seen = new Set(), fresh = [];
+      let prev = null;
+      for (const o of items) {
+        seen.add(o.id);
+        let el = live.get(o.id);
+        if (!el) {
+          el = document.createElementNS(NS, 'g');
+          live.set(o.id, el);
+          el.style.opacity = 0;
+          el.style.transform = `translate(${r(o.pos[0])}px, ${r(o.pos[1] - (o.k === 'cube' ? 40 : 0))}px)`;
+          fresh.push(el);
+        }
+        clearTimeout(el._out);
+        el.classList.remove('xp-out');
+        if (el.dataset.sig !== o.sig) {
+          el.innerHTML = o.html;
+          el.dataset.sig = o.sig;
+          el.setAttribute('class', `xp-item xp-${o.k}`);
+        }
+        // Keep paint order = scene order, without moving nodes that are already in place.
+        let want = prev ? prev.nextSibling : layer.firstChild;
+        while (want && want.classList.contains('xp-out')) want = want.nextSibling;
+        if (want !== el) layer.insertBefore(el, want);
+        prev = el;
+        o.el = el;
+      }
+      for (const [id, el] of live) {
+        if (seen.has(id) || el.classList.contains('xp-out')) continue;
+        el.classList.add('xp-out');
+        el.style.opacity = 0;
+        el._out = setTimeout(() => { el.remove(); live.delete(id); }, 400);
+      }
+      if (fresh.length) layer.getBoundingClientRect();  // commit start state so the drop-in animates
+      for (const o of items) {
+        o.el.style.transform = `translate(${r(o.pos[0])}px, ${r(o.pos[1])}px)`;
+        o.el.style.opacity = '';
+      }
+    };
+  }
+
   // ── Mount one explainer into host ─────────────────────────────────────────────
 
   function render(host, lessonId) {
@@ -138,52 +185,15 @@
       </div>`;
 
     const $ = s => host.querySelector(s);
-    const svg = $('.xp-svg'), layer = $('.xp-layer');
+    const svg = $('.xp-svg');
     const dots = [...host.querySelectorAll('.xp-dot')];
-    const live = new Map();
+    const paint = stage($('.xp-layer'));
     let cur = 0;
 
     function show(i) {
       cur = i;
       const st = steps[i];
-      const seen = new Set(), fresh = [];
-      let prev = null;
-      for (const o of built[i]) {
-        seen.add(o.id);
-        let el = live.get(o.id);
-        if (!el) {
-          el = document.createElementNS(NS, 'g');
-          live.set(o.id, el);
-          el.style.opacity = 0;
-          el.style.transform = `translate(${r(o.pos[0])}px, ${r(o.pos[1] - (o.k === 'cube' ? 40 : 0))}px)`;
-          fresh.push(el);
-        }
-        clearTimeout(el._out);
-        el.classList.remove('xp-out');
-        if (el.dataset.sig !== o.sig) {
-          el.innerHTML = o.html;
-          el.dataset.sig = o.sig;
-          el.setAttribute('class', `xp-item xp-${o.k}`);
-        }
-        // Keep paint order = scene order, without moving nodes that are already in place.
-        let want = prev ? prev.nextSibling : layer.firstChild;
-        while (want && want.classList.contains('xp-out')) want = want.nextSibling;
-        if (want !== el) layer.insertBefore(el, want);
-        prev = el;
-        o.el = el;
-      }
-      for (const [id, el] of live) {
-        if (seen.has(id) || el.classList.contains('xp-out')) continue;
-        el.classList.add('xp-out');
-        el.style.opacity = 0;
-        el._out = setTimeout(() => { el.remove(); live.delete(id); }, 400);
-      }
-      if (fresh.length) layer.getBoundingClientRect();  // commit start state so the drop-in animates
-      for (const o of built[i]) {
-        o.el.style.transform = `translate(${r(o.pos[0])}px, ${r(o.pos[1])}px)`;
-        o.el.style.opacity = '';
-      }
-
+      paint(built[i]);
       svg.setAttribute('aria-label', `${st.title}. ${st.text.replace(/<[^>]+>/g, '')}`);
       $('.xp-meta').textContent = `Step ${i + 1} / ${steps.length}`;
       $('.xp-title').textContent = st.title;
@@ -620,4 +630,5 @@
 
   window.EXPLAINERS = EXPLAINERS;
   window.renderExplainer = render;
+  window.Iso = { build, stage, DEFS, r, esc, C, R, T, G, L, A, SLAB, labels, tiles, top, regTop };
 }());
