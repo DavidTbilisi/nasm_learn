@@ -864,6 +864,7 @@ header h1::after {
 .cpu3d .cpu3d-stage .xp-svg { width: 100%; height: 100%; max-height: none; }
 .cpu3d .xp-card { min-height: 92px; }
 .cpu3d .xp-text code { color: var(--amber); }
+.cpu3d .xp-item:has(> title) { cursor: help; }
 
 .cm-s-nasm-dark.CodeMirror {
   background: var(--screen);

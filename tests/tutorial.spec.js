@@ -901,6 +901,15 @@ test.describe('ASM / C view', () => {
     expect([...new Set(seen)].sort((a, b) => a - b)).toEqual([...Array(total).keys()]);
   });
 
+  test('3D view: ESP and EBP carry their mnemonic tooltips', async ({ page }) => {
+    await page.locator('.tab-btn').nth(10).click();                      // lesson 11: function frame
+    await page.click('#code-view [data-view="cpu"]');
+    for (let n = 0; n < 7; n++) await page.click('#btn-step');            // past mov ebp, esp
+    const tips = await page.locator('#cpu-pane svg title').allTextContents();
+    expect(tips.filter(t => t.startsWith('ESP = Every Single Push')).length).toBeGreaterThanOrEqual(3);  // cube, name, tower pointer
+    expect(tips.filter(t => t.startsWith('EBP = Exact Bookmark Position')).length).toBeGreaterThanOrEqual(3);
+  });
+
   test('3D CPU builds phases for every instruction in every lesson', async ({ page }) => {
     const bad = await page.evaluate(() => LESSONS.flatMap(l => {
       const run = sim.runAll(l.code);
