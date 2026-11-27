@@ -33,4 +33,15 @@ done
 head -c 70000 /dev/zero | tr '\0' '+' > "$tmp/big.bf"
 ./brainfuck "$tmp/big.bf" 2>/dev/null; check "bf rejects oversized program" "$?" "1"
 
+# ── life: must match the Python reference on the same torus ──
+printf '.#\n..#\n###\n' > "$tmp/glider.life"
+for case in "glider.life 0" "glider.life 4" "glider.life 7360"; do
+  set -- $case
+  check "life $1 gen $2" "$(./life "$tmp/$1" "$2")" "$(python3 life_ref.py "$tmp/$1" "$2")"
+done
+for n in 1 30 200; do
+  check "life gosper gen $n" "$(./life gosper.life $n)" "$(python3 life_ref.py gosper.life $n)"
+done
+./life /nonexistent 1 2>/dev/null; check "life missing file exits 1" "$?" "1"
+
 exit $fail
