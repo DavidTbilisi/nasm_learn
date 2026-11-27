@@ -839,6 +839,25 @@ header h1::after {
 /* ── CodeMirror — retro CRT theme ──────────────────────────────────────────*/
 #editor-host { flex: 1; overflow: hidden; }
 
+/* ── ASM / C view toggle ─────────────────────────────────────────────────── */
+#code-view { display: flex; margin-left: 8px; }
+#code-view .btn { padding: 3px 10px; font-size: 14px; }
+#code-view .btn + .btn { border-left: none; }
+#code-view .btn[aria-pressed="true"] { color: var(--p); border-color: var(--p); box-shadow: var(--glow-sm); }
+#code-panes { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+#code-panes > #editor-host { min-width: 0; }
+#c-pane { flex: 1; min-width: 0; display: none; flex-direction: column; border-left: 1px solid var(--border); }
+#c-pane-label {
+  padding: 2px 8px; font-family: var(--mono); font-size: 12px;
+  color: var(--p-vdim); background: var(--surface); border-bottom: 1px solid var(--border);
+}
+#c-host { flex: 1; min-height: 0; position: relative; }
+#c-host .CodeMirror { position: absolute; inset: 0; height: auto; }
+#code-panes[data-view="split"] #c-pane,
+#code-panes[data-view="c"]     #c-pane { display: flex; }
+#code-panes[data-view="c"]     #editor-host { display: none; }
+#code-panes[data-view="c"]     #c-pane { border-left: none; }
+
 .cm-s-nasm-dark.CodeMirror {
   background: var(--screen);
   color: var(--p);

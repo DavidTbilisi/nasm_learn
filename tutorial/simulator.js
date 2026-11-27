@@ -187,7 +187,9 @@ class NASMSimulator {
     let section = 'text';
     let dataPtr = NASMSimulator.DATA_BASE;
 
-    for (let line of code.split('\n')) {
+    const srcLines = code.split('\n');
+    for (let srcLine = 0; srcLine < srcLines.length; srcLine++) {
+      let line = srcLines[srcLine];
       const ci = line.indexOf(';');
       if (ci !== -1) line = line.slice(0, ci);
       line = line.trim();
@@ -258,7 +260,7 @@ class NASMSimulator {
         if (nm) { op = op.replace(/\s+/g,'') + '_' + nm[1].toLowerCase(); argStr = nm[2].trim(); }
       }
       const args = argStr ? this._splitArgs(argStr) : [];
-      instructions.push({ op, args, raw: line.trim() });
+      instructions.push({ op, args, raw: line.trim(), line: srcLine });
     }
 
     // Merge all label types into one lookup (code labels store indices, data/equ store addresses)

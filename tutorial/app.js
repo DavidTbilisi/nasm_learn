@@ -28,6 +28,26 @@ const solutionBox  = document.getElementById('solution-box');
 const solutionBtn  = document.getElementById('solution-btn');
 const tabBtns      = document.querySelectorAll('.tab-btn');
 const stepCounter  = document.getElementById('step-counter');
+
+// ── ASM / C view toggle ───────────────────────────────────────────────────────
+// The C pane shows each lesson's hand-written C version (lesson.c), read-only.
+const VIEW_KEY   = 'nasm-code-view';
+const codePanes  = document.getElementById('code-panes');
+const cView      = CodeMirror(document.getElementById('c-host'), {
+  mode: 'text/x-csrc', theme: 'nasm-dark', lineNumbers: true, readOnly: true, viewportMargin: Infinity,
+});
+function setCodeView(view) {
+  if (!['asm', 'split', 'c'].includes(view)) view = 'asm';
+  codePanes.dataset.view = view;
+  document.querySelectorAll('#code-view [data-view]').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  try { localStorage.setItem(VIEW_KEY, view); } catch (_) {}
+  cm.refresh();      // CodeMirror mis-measures after display:none, so re-measure both
+  cView.refresh();
+}
+document.querySelectorAll('#code-view [data-view]').forEach(b =>
+  b.addEventListener('click', () => setCodeView(b.dataset.view)));
+setCodeView((() => { try { return localStorage.getItem(VIEW_KEY); } catch (_) { return null; } })());
 const errorBanner  = document.getElementById('error-banner');
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -105,34 +125,53 @@ function renderState(state, prevState) {
 
 // ── Line highlighting via CodeMirror API ──────────────────────────────────────
 
+let activeCLine = -1; // C-pane line currently highlighted
+
 function clearStepHighlight() {
   if (activeStepLine >= 0) {
     cm.removeLineClass(activeStepLine, 'background', 'cm-active-step');
     activeStepLine = -1;
   }
+  if (activeCLine >= 0) {
+    cView.removeLineClass(activeCLine, 'background', 'cm-active-step');
+    activeCLine = -1;
+  }
+}
+
+// C line for instruction ip: each C line's `// ...` comment names the asm it stands for.
+// Walk the instructions in order, searching forward from the last hit, so a repeated
+// instruction (two `mov eax, -32`) maps to its own copy. -1 = no C line names it.
+function cLineFor(instructions, ip) {
+  const norm = t => t.toLowerCase().replace(/\s+/g, ' ').trim();
+  const comments = cView.getValue().split('\n').map(l => {
+    const i = l.indexOf('//');
+    return i < 0 ? '' : norm(l.slice(i + 2));
+  });
+  let from = 0, hit = -1;
+  for (let n = 0; n <= ip; n++) {
+    const ins = norm(instructions[n].raw).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(^|\\W)' + ins + '(?!\\w)');
+    hit = -1;
+    for (let k = 0; k < comments.length; k++) {
+      const j = (from + k) % comments.length;
+      if (re.test(comments[j])) { hit = from = j; break; }
+    }
+  }
+  return hit;
 }
 
 function highlightLine(ip, instructions) {
   clearStepHighlight();
   if (ip < 0 || !instructions || ip >= instructions.length) return;
 
-  const targetRaw = instructions[ip].raw.trim().toLowerCase();
-  const lineCount  = cm.lineCount();
+  activeStepLine = instructions[ip].line;
+  cm.addLineClass(activeStepLine, 'background', 'cm-active-step');
+  cm.scrollIntoView({ line: activeStepLine, ch: 0 }, 60);
 
-  for (let i = 0; i < lineCount; i++) {
-    let line = cm.getLine(i);
-    const ci = line.indexOf(';');
-    if (ci !== -1) line = line.slice(0, ci);
-    line = line.trim();
-    if (!line) continue;
-    if (line.includes(':')) line = line.slice(line.indexOf(':') + 1).trim();
-    if (!line) continue;
-    if (line.toLowerCase() === targetRaw) {
-      cm.addLineClass(i, 'background', 'cm-active-step');
-      cm.scrollIntoView({ line: i, ch: 0 }, 60);
-      activeStepLine = i;
-      return;
-    }
+  activeCLine = cLineFor(instructions, ip);
+  if (activeCLine >= 0) {
+    cView.addLineClass(activeCLine, 'background', 'cm-active-step');
+    cView.scrollIntoView({ line: activeCLine, ch: 0 }, 60);
   }
 }
 
@@ -308,6 +347,7 @@ function loadLesson(idx) {
   solutionBtn.style.opacity = lesson.exercise.solution ? '' : '0.45';
 
   cm.setValue(lesson.code.trim());
+  cView.setValue(lesson.c ?? '// No C version for this lesson yet.');
   cm.clearHistory();
   doReset();
 }
