@@ -384,7 +384,8 @@
 
   // ── Mount ──────────────────────────────────────────────────────────────────────
 
-  function mount(host) {
+  // onInstr(k) fires whenever a phase of instruction k is shown, so the editor can highlight it.
+  function mount(host, { onInstr = () => {} } = {}) {
     const ctx0 = { labels: {}, lo: 0 };
     const blank = { regs: { eax: 0, ebx: 0, ecx: 0, edx: 0, esi: 0, edi: 0, esp: STACK_TOP - 4 * SLOTS, ebp: STACK_TOP }, flags: { zf: 1, sf: 1, cf: 1, of: 1 }, mem: {}, stdout: [] };
     // Fixed viewBox from the fullest possible scene, so nothing jumps between runs.
@@ -434,7 +435,8 @@
     function showPhase(i, auto) {
       const ph = cur.list[i];
       paint(ph.scene);
-      card(`${cur.meta} · phase ${i + 1} / ${cur.list.length}`, ph.title, ph.text);
+      card(`Instruction ${ph.k + 1} / ${cur.n} · phase ${i + 1} / ${cur.list.length}`, ph.title, ph.text);
+      onInstr(ph.k);
       dots(cur.list.length, i);
       if (ph.settle) timers.push(setTimeout(() => paint(ph.settle), auto ? PHASE_MS : 500));
     }
@@ -456,8 +458,9 @@
         dots(0); $('.cpu3d-replay').disabled = true;
         return;
       }
-      const k = s >= last ? last : s - 1;      // at the end, the final state includes the last instruction
-      if (k < 0) {
+      // The app's last step jumps to the final state, which includes two instructions: replay both.
+      const ks = s >= last ? [last - 1, last].filter(k => k >= 0) : [s - 1];
+      if (ks[0] < 0) {
         cur = null;
         const next = run.history[0].instr;
         paint(scene(run.history[0].before, context(run)));
@@ -465,7 +468,7 @@
         dots(0); $('.cpu3d-replay').disabled = true;
         return;
       }
-      cur = { list: phases(run, k), meta: `Instruction ${k + 1} / ${run.history.length}` };
+      cur = { list: ks.flatMap(k => phases(run, k).map(ph => ({ ...ph, k }))), n: run.history.length };
       $('.cpu3d-replay').disabled = false;
       play(animate);
     }

@@ -877,6 +877,30 @@ test.describe('ASM / C view', () => {
     await expect(page.locator('#cpu-pane .xp-dot')).toHaveCount(3);   // fetch, read, write
   });
 
+  test('3D view: editor highlights the replayed line, and every instruction is replayed once', async ({ page }) => {
+    await page.locator('.tab-btn').nth(1).click();                       // lesson 2: 13 instructions
+    await page.click('#code-view [data-view="cpu"]');
+    const total = await page.evaluate(() => sim.runAll(cm.getValue()).history.length);
+    const seen = [];
+    await page.click('#btn-step');                                        // ready: nothing ran yet
+    for (let n = 0; n < total; n++) {
+      await page.click('#btn-step');
+      await page.waitForTimeout(50);                                      // first phase fires on a 0 ms timer
+      const { meta, line, raw } = await page.evaluate(() => {
+        const m = document.querySelector('#cpu-pane .xp-meta').textContent.match(/Instruction (\d+)/);
+        const k = +m[1] - 1;
+        return { meta: k, line: cm.getLine(activeStepLine), raw: runResult.history[k].instr.raw };
+      });
+      expect(line.split(';')[0].trim()).toBe(raw);                        // editor shows what the 3D replays
+      seen.push(meta);
+      if (await page.locator('#btn-step', { hasText: 'Restart' }).count()) break;
+    }
+    // the last Step replays two instructions; wait for the second
+    await expect(page.locator('#cpu-pane .xp-meta')).toContainText(`Instruction ${total} /`, { timeout: 15000 });
+    seen.push(total - 1);
+    expect([...new Set(seen)].sort((a, b) => a - b)).toEqual([...Array(total).keys()]);
+  });
+
   test('3D CPU builds phases for every instruction in every lesson', async ({ page }) => {
     const bad = await page.evaluate(() => LESSONS.flatMap(l => {
       const run = sim.runAll(l.code);
