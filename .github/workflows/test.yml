@@ -60,3 +60,18 @@ jobs:
 
       - name: Run fidelity check
         run: npm run check:fidelity
+
+  projects:
+    name: Pure-assembly projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install nasm and hexdump
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm bsdextrautils
+
+      - name: Build and test projects
+        run: make -C projects test
