@@ -840,6 +840,31 @@ test.describe('ASM / C view', () => {
     expect(missing).toEqual([]);
   });
 
+  test('stepping highlights the matching C line', async ({ page }) => {
+    await page.click('#code-view [data-view="split"]');
+    for (let n = 0; n < 3; n++) {
+      await page.click('#btn-step');
+      const { asm, c } = await page.evaluate(() => ({
+        asm: cm.getLine(activeStepLine), c: activeCLine < 0 ? '' : cView.getLine(activeCLine),
+      }));
+      const norm = t => t.toLowerCase().replace(/\s+/g, ' ').trim();
+      const ins = norm(asm.split(';')[0].replace(/^\s*\w+:/, ''));
+      expect(ins).not.toBe('');
+      expect(norm(c.split('//')[1] ?? '')).toContain(ins);
+    }
+    await page.click('#btn-reset');
+    await expect(page.locator('#c-host .cm-active-step')).toHaveCount(0);
+  });
+
+  test('every instruction in every lesson has a C line', async ({ page }) => {
+    const unmapped = await page.evaluate(() => LESSONS.flatMap(l => {
+      cView.setValue(l.c);
+      const { instructions } = sim.parse(l.code);
+      return instructions.map((ins, ip) => cLineFor(instructions, ip) < 0 ? `L${l.id}: ${ins.raw}` : null).filter(Boolean);
+    }));
+    expect(unmapped).toEqual([]);
+  });
+
   test('choice survives a reload', async ({ page }) => {
     await page.click('#code-view [data-view="c"]');
     await page.reload();
