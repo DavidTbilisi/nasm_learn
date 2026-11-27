@@ -12,6 +12,7 @@ function gymRun(lines) {
 const rnd  = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const shuf = arr => [...arr].sort(() => Math.random() - .5);
+const hx   = v => '0x' + v.toString(16).toUpperCase().padStart(2, '0');
 
 // Build plausible wrong answers for a numeric correct value
 function wrongs(correct, n = 3) {
@@ -305,6 +306,65 @@ const DRILLS = {
     },
   ],
 
+  // ── Hex ↔ decimal ↔ binary ───────────────────────────────────────────────────
+  hex: [
+    // 2-digit hex → decimal: hi×16 + lo
+    () => {
+      const v = rnd(0x10, 0xFF), hi = v >> 4, lo = v & 0xF;
+      return { cat:'Hex', diff:1, q:`<code>${hx(v)}</code> in decimal?`, code:null,
+        answer:v, type:'type',
+        explain:`${hx(v)} → ${hi}×16 + ${lo} = ${hi*16} + ${lo} = ${v}.` };
+    },
+    // Anchor values you see constantly in asm
+    () => {
+      const q = pick([
+        { q:'<code>0x0A</code> is the ASCII code for:', a:'newline (10)', opts:['newline (10)','space (32)','\'A\' (65)','tab (9)'] },
+        { q:'<code>0x20</code> is:', a:'32 — space', opts:['32 — space','20 — DC4','16 — DLE','64 — \'@\''] },
+        { q:'<code>0x30</code> is the ASCII character:', a:'\'0\' (48)', opts:['\'0\' (48)','\'A\' (65)','space (32)','\'a\' (97)'] },
+        { q:'<code>0x41</code> is the ASCII character:', a:'\'A\' (65)', opts:['\'A\' (65)','\'a\' (97)','\'0\' (48)','\'Z\' (90)'] },
+        { q:'<code>0x80</code> in decimal:', a:'128', opts:['128','80','256','64'] },
+        { q:'<code>0xFF</code> in decimal:', a:'255', opts:['255','256','127','100'] },
+        { q:'<code>0x100</code> in decimal:', a:'256', opts:['256','100','255','1000'] },
+        { q:'<code>0x1000</code> in decimal (one memory page):', a:'4096', opts:['4096','1000','65536','1024'] },
+        { q:'Lowercase = uppercase + ?', a:'0x20 (32)', opts:['0x20 (32)','0x10 (16)','0x30 (48)','0x26 (38)'] },
+      ]);
+      return { cat:'Hex', diff:1, q:q.q, code:null, type:'mc',
+        opts: shuf(q.opts).map(o => ({ label:o, correct: o===q.a })),
+        answer:q.a, explain:`${q.a}.` };
+    },
+    // Decimal → hex (MC: the typed parser would accept the decimal itself)
+    () => {
+      const v = rnd(17, 255), a = hx(v);
+      const cands = [((v & 0xF) << 4) | (v >> 4), v ^ 0x10, v + 1, v - 1, v + 0x10, v - 0x10];
+      const ws = new Set();
+      if (v < 100) ws.add(`0x${v}`); // classic mistake: reading decimal digits as hex
+      for (const c of cands) { if (ws.size >= 3) break; if (c > 0 && c < 0x100 && c !== v) ws.add(hx(c)); }
+      while (ws.size < 3) { const c = rnd(16, 255); if (c !== v) ws.add(hx(c)); }
+      return { cat:'Hex', diff:2, q:`<code>${v}</code> in hex?`, code:null, type:'mc', answer:a,
+        opts: shuf([a, ...ws].map(o => ({ label:`<code>${o}</code>`, correct: o===a }))),
+        explain:`${v} ÷ 16 = ${v>>4} remainder ${v&15} → digits ${(v>>4).toString(16).toUpperCase()}, ${(v&15).toString(16).toUpperCase()} → ${a}.` };
+    },
+    // Hex → binary: one hex digit = one nibble
+    () => {
+      const v = rnd(0x11, 0xFE);
+      const bin = n => n.toString(2).padStart(8,'0').replace(/(\d{4})/, '$1 ');
+      const a = bin(v);
+      const ws = new Set([((v & 0xF) << 4) | (v >> 4), v ^ (1 << rnd(0,7)), v ^ 0xFF, v ^ (1 << rnd(0,7))]
+        .filter(c => c !== v).map(bin));
+      while (ws.size < 3) { const c = rnd(0, 255); if (c !== v) ws.add(bin(c)); }
+      return { cat:'Hex', diff:2, q:`<code>${hx(v)}</code> in binary?`, code:null, type:'mc', answer:a,
+        opts: shuf([a, ...[...ws].slice(0,3)].map(o => ({ label:`<code>${o}</code>`, correct: o===a }))),
+        explain:`Each hex digit is 4 bits: ${(v>>4).toString(16).toUpperCase()} = ${bin(v).slice(0,4)}, ${(v&15).toString(16).toUpperCase()} = ${bin(v).slice(5)}.` };
+    },
+    // 3-digit hex → decimal: 256s, 16s, 1s
+    () => {
+      const v = rnd(0x100, 0xFFF), d2 = v >> 8, d1 = (v >> 4) & 0xF, d0 = v & 0xF;
+      return { cat:'Hex', diff:3, q:`<code>${hx(v)}</code> in decimal?`, code:null,
+        answer:v, type:'type',
+        explain:`${hx(v)} → ${d2}×256 + ${d1}×16 + ${d0} = ${d2*256} + ${d1*16} + ${d0} = ${v}.` };
+    },
+  ],
+
   // ── Spot the Bug — silent-corruption traps ─────────────────────────────────
   spotbug: [
     // Sub-register width — mov al only touches bits 0-7
@@ -394,6 +454,7 @@ const DRILLS = {
 
 // ── Workout definitions ───────────────────────────────────────────────────────
 const WORKOUTS = [
+  { id:'hex',        icon:'🔢', name:'Hex',          desc:'Hex ↔ decimal ↔ binary, ASCII anchors.',    cats:['hex'],                                          reps:10, secs:15 },
   { id:'registers',  icon:'📦', name:'Registers',    desc:'Names, sub-registers, and MOV.',           cats:['registers'],                                    reps:8,  secs:12 },
   { id:'arithmetic', icon:'➕', name:'Arithmetic',   desc:'ADD, SUB, IMUL, shifts — build intuition.', cats:['arithmetic'],                                   reps:8,  secs:15 },
   { id:'flags',      icon:'🚩', name:'Flags',        desc:'ZF, CF, SF, OF — instant recognition.',     cats:['flags'],                                        reps:8,  secs:12 },
@@ -401,7 +462,7 @@ const WORKOUTS = [
   { id:'addressing', icon:'📍', name:'Addressing',   desc:'[ebp+8], [arr+ecx*4], LEA.',                cats:['addressing'],                                   reps:8,  secs:15 },
   { id:'idioms',     icon:'⚡', name:'Idioms',       desc:'Fastest, most idiomatic assembly patterns.', cats:['idioms'],                                       reps:8,  secs:15 },
   { id:'spotbug',    icon:'🐛', name:'Spot the Bug', desc:'Silent-corruption traps: endianness, sub-registers, pop order.', cats:['spotbug'],                                      reps:6,  secs:25 },
-  { id:'fullbody',   icon:'💪', name:'Full Body',    desc:'All categories. The real workout.',          cats:['registers','arithmetic','flags','trace','addressing','idioms','spotbug'], reps:14, secs:20 },
+  { id:'fullbody',   icon:'💪', name:'Full Body',    desc:'All categories. The real workout.',          cats:['hex','registers','arithmetic','flags','trace','addressing','idioms','spotbug'], reps:14, secs:20 },
 ];
 
 // ── Session state ─────────────────────────────────────────────────────────────
