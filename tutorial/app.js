@@ -36,12 +36,15 @@ const codePanes  = document.getElementById('code-panes');
 const cView      = CodeMirror(document.getElementById('c-host'), {
   mode: 'text/x-csrc', theme: 'nasm-dark', lineNumbers: true, readOnly: true, viewportMargin: Infinity,
 });
+const cpu3d = Cpu3D.mount(document.getElementById('cpu-pane'));
+
 function setCodeView(view) {
-  if (!['asm', 'split', 'c'].includes(view)) view = 'asm';
+  if (!['asm', 'split', 'c', 'cpu'].includes(view)) view = 'asm';
   codePanes.dataset.view = view;
   document.querySelectorAll('#code-view [data-view]').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.view === view)));
   try { localStorage.setItem(VIEW_KEY, view); } catch (_) {}
+  window.refreshLayout?.();   // 3D view has its own editor height
   cm.refresh();      // CodeMirror mis-measures after display:none, so re-measure both
   cView.refresh();
 }
@@ -210,6 +213,7 @@ function doReset() {
     mem:   {}, stdout: [], exitCode: null,
   };
   renderState(blank, null);
+  cpu3d.update(null, -1, false);
   btnPrev.disabled = true;
   btnStep.textContent = 'Step ▶';
 }
@@ -231,6 +235,7 @@ function doRun() {
 
   appendLog(`Executed ${runResult.steps} instruction(s).`, 'log-info');
   stepIndex = runResult.history.length - 1;
+  cpu3d.update(runResult, stepIndex, false);
   updateStepCounter();
   clearStepHighlight();
   btnPrev.disabled = false;
@@ -255,6 +260,7 @@ function doStep() {
 
   renderState(dispState, prevEntry ? prevEntry.before : null);
   highlightLine(entry.before.ip, runResult.instructions);
+  cpu3d.update(runResult, stepIndex, true);
 
   let msg = `[${stepIndex+1}] ${entry.instr.raw}`;
   if (entry.branch) msg += entry.branch.taken ? ` → taken (${entry.branch.target})` : ' → not taken';
@@ -279,6 +285,7 @@ function doPrev() {
   const prevEntry= stepIndex > 0 ? runResult.history[stepIndex-1] : null;
   renderState(entry.before, prevEntry ? prevEntry.before : null);
   highlightLine(entry.before.ip, runResult.instructions);
+  cpu3d.update(runResult, stepIndex, false);
   updateStepCounter();
   btnPrev.disabled = stepIndex <= 0;
   btnStep.textContent = 'Step ▶';

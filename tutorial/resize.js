@@ -2,7 +2,7 @@
 
 // ── Persisted layout sizes ────────────────────────────────────────────────────
 const SIZE_KEY = 'nasm-layout-v2';
-const DEFAULTS  = { lessonW: 340, editorH: 270, regW: 260, flagsW: 200 };
+const DEFAULTS  = { lessonW: 340, editorH: 270, editorH3d: 560, regW: 260, flagsW: 200 };
 
 const sizes = Object.assign({}, DEFAULTS,
   JSON.parse(localStorage.getItem(SIZE_KEY) || '{}'));
@@ -13,14 +13,19 @@ const rightPanel  = document.getElementById('right-panel');
 const editorArea  = document.getElementById('editor-area');
 const stateArea   = document.getElementById('state-area');
 
+// The 3D CPU view needs a taller editor area, so it keeps its own height.
+const editorKey = () => (document.getElementById('code-panes').dataset.view === 'cpu' ? 'editorH3d' : 'editorH');
+
 // ── Apply sizes to DOM ────────────────────────────────────────────────────────
 function apply() {
+  const editorH = sizes[editorKey()];
+
   // Lesson sidebar width
   mainGrid.style.gridTemplateColumns =
     `${sizes.lessonW}px 8px 1fr`;
 
   // Editor / state vertical split (right panel is flex-col)
-  editorArea.style.height = sizes.editorH + 'px';
+  editorArea.style.height = editorH + 'px';
 
   // State-area column widths
   stateArea.style.gridTemplateColumns =
@@ -32,7 +37,7 @@ function apply() {
     const err     = document.getElementById('error-banner');
     const taken   = toolbar.offsetHeight
                   + (err.style.display !== 'none' ? err.offsetHeight : 0);
-    window.cmEditor.setSize(null, Math.max(60, sizes.editorH - taken));
+    window.cmEditor.setSize(null, Math.max(60, editorH - taken));
   }
 }
 
@@ -80,7 +85,7 @@ document.getElementById('h-lesson')
   .addEventListener('mousedown', e => startDrag(e, 'x', 'lessonW', 180, 560));
 
 document.getElementById('h-editor')
-  .addEventListener('mousedown', e => startDrag(e, 'y', 'editorH', 120, 520));
+  .addEventListener('mousedown', e => startDrag(e, 'y', editorKey(), 120, Math.max(520, window.innerHeight - 160)));
 
 document.getElementById('h-reg')
   .addEventListener('mousedown', e => startDrag(e, 'x', 'regW', 140, 400));

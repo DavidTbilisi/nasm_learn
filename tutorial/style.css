@@ -857,6 +857,13 @@ header h1::after {
 #code-panes[data-view="c"]     #c-pane { display: flex; }
 #code-panes[data-view="c"]     #editor-host { display: none; }
 #code-panes[data-view="c"]     #c-pane { border-left: none; }
+#cpu-pane { flex: 1.5; min-width: 0; display: none; padding: 8px; border-left: 1px solid var(--border); }
+#code-panes[data-view="cpu"] #cpu-pane { display: flex; }
+.cpu3d { flex: 1; min-height: 0; min-width: 0; }
+.cpu3d .cpu3d-stage { flex: 1; min-height: 0; }
+.cpu3d .cpu3d-stage .xp-svg { width: 100%; height: 100%; max-height: none; }
+.cpu3d .xp-card { min-height: 92px; }
+.cpu3d .xp-text code { color: var(--amber); }
 
 .cm-s-nasm-dark.CodeMirror {
   background: var(--screen);

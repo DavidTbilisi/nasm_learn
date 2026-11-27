@@ -865,6 +865,31 @@ test.describe('ASM / C view', () => {
     expect(unmapped).toEqual([]);
   });
 
+  test('3D CPU replays each step in phases', async ({ page }) => {
+    await page.click('#code-view [data-view="cpu"]');
+    await expect(page.locator('#cpu-pane')).toBeVisible();
+    await expect(page.locator('#cpu-pane .xp-title')).toHaveText('Ready');
+    await page.click('#btn-step');                       // before instruction 1: nothing ran yet
+    await page.click('#btn-step');                       // lesson 1: mov eax, 42 just ran
+    await expect(page.locator('#cpu-pane .xp-title')).toHaveText(/Fetch/);
+    await expect(page.locator('#cpu-pane .xp-title')).toHaveText(/Write back → EAX/, { timeout: 5000 });
+    await expect(page.locator('#cpu-pane .xp-text')).toContainText('EAX 0 → 42');
+    await expect(page.locator('#cpu-pane .xp-dot')).toHaveCount(3);   // fetch, read, write
+  });
+
+  test('3D CPU builds phases for every instruction in every lesson', async ({ page }) => {
+    const bad = await page.evaluate(() => LESSONS.flatMap(l => {
+      const run = sim.runAll(l.code);
+      return run.history.map((h, k) => {
+        try {
+          const ph = Cpu3D.phases(run, k);
+          return ph.length >= 2 && ph.every(p => p.scene.length && p.title) ? null : `L${l.id} ${h.instr.raw}: ${ph.length} phases`;
+        } catch (e) { return `L${l.id} ${h.instr.raw}: ${e.message}`; }
+      }).filter(Boolean);
+    }));
+    expect(bad).toEqual([]);
+  });
+
   test('choice survives a reload', async ({ page }) => {
     await page.click('#code-view [data-view="c"]');
     await page.reload();
