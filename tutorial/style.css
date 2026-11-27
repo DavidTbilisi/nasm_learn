@@ -778,27 +778,23 @@ header h1::after {
 }
 
 /* stdout */
-.stdout-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--p-dim);
-  margin-bottom: 3px;
-  margin-top: 2px;
-}
-.stdout-line {
+/* Output window: a terminal for the program's stdout */
+.output-term {
+  flex: 0 1 45%;
+  min-height: 48px;
+  overflow: auto;
+  margin: 0;
+  padding: 6px 10px;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.4;
   color: var(--p);
+  background: var(--screen);
   white-space: pre-wrap;
   word-break: break-all;
-  background: rgba(51,255,0,0.06);
-  border-left: 2px solid var(--border-hi);
-  padding: 2px 5px;
-  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
 }
-.stdout-exit { font-size: 12px; color: var(--p-dim); margin-top: 3px; }
-.stack-sep   { border: none; border-top: 1px solid var(--p-vdim); margin: 6px 0; }
+.output-exit { margin-top: 4px; color: var(--p-dim); }
 
 /* ── Execution Log ─────────────────────────────────────────────────────────── */
 #step-log {
@@ -1841,7 +1837,6 @@ body[data-theme="cyberpunk"] .flag-set {
 
 /* ── Stack ─────────────────────────────────────────────────────────────────── */
 body[data-theme="cyberpunk"] .stack-row.stack-top { background: rgba(0,229,255,0.07); }
-body[data-theme="cyberpunk"] .stdout-line { background: rgba(0,229,255,0.06); border-left-color: var(--border-hi); }
 
 /* ── Log ───────────────────────────────────────────────────────────────────── */
 body[data-theme="cyberpunk"] .log-entry::before { color: var(--p-dim); }
@@ -2188,7 +2183,6 @@ body[data-theme="academic"] .flag.changed { border-color: var(--amber); box-shad
 body[data-theme="academic"] .stack-row.stack-top { background: var(--amber-dim); border-left-color: var(--amber); }
 body[data-theme="academic"] .stack-val   { color: #1e3a5f; }
 body[data-theme="academic"] .stack-label { color: var(--amber); text-shadow: none; }
-body[data-theme="academic"] .stdout-line { color: var(--p); background: rgba(0,0,0,0.04); border-left-color: var(--border); }
 
 /* ── Log ───────────────────────────────────────────────────────────────────── */
 body[data-theme="academic"] .log-entry         { color: var(--p-dim); }
@@ -2458,7 +2452,7 @@ body[data-theme="academic"] .gym-stat span { color: var(--p); text-shadow: none;
 
 #pg-log-section {
   flex: 0 0 auto;
-  max-height: 160px;
+  max-height: 280px;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--border);

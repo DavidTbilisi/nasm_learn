@@ -775,7 +775,7 @@ _start:
   int 0x80`
     ));
     await page.click('#btn-run');
-    await expect(page.locator('#stack-panel')).toContainText('hi');
+    await expect(page.locator('#output-panel')).toContainText('hi');
   });
 });
 
@@ -799,6 +799,60 @@ test.describe('Walkthrough explainer', () => {
       await expect(xp.locator('.xp-meta')).toHaveText(/^Step 1 \//);
     }
     expect(errors).toEqual([]);
+  });
+});
+
+// ── Output window ─────────────────────────────────────────────────────────────
+
+test.describe('Output window', () => {
+  const TWO_WRITES = `section .data
+  a db 'Hello, '
+  b db 'World!', 10
+section .text
+global _start
+_start:
+  mov eax, 4
+  mov ebx, 1
+  mov ecx, a
+  mov edx, 7
+  int 0x80
+  mov eax, 4
+  mov ebx, 1
+  mov ecx, b
+  mov edx, 7
+  int 0x80
+  mov eax, 1
+  mov ebx, 3
+  int 0x80`;
+
+  test.beforeEach(async ({ page }) => { await page.goto('/'); });
+
+  test('starts empty with a hint', async ({ page }) => {
+    await expect(page.locator('#output-panel')).toContainText('No output yet');
+  });
+
+  test('lesson 6 prints with real newlines and the exit code', async ({ page }) => {
+    await page.locator('.tab-btn').nth(5).click();
+    await page.click('#btn-run');
+    const text = await page.locator('#output-panel').innerText();
+    expect(text).toContain('Hello, World!\nGoodbye!');
+    expect(text).toContain('[process exited with code 0]');
+    await expect(page.locator('#stack-panel')).not.toContainText('Hello');   // no longer mixed into the stack
+  });
+
+  test('two writes without a newline join on one line, like a terminal', async ({ page }) => {
+    await page.evaluate(code => cm.setValue(code), TWO_WRITES);
+    await page.click('#btn-run');
+    const text = await page.locator('#output-panel').innerText();
+    expect(text.split('\n')[0]).toBe('Hello, World!');
+    expect(text).toContain('[process exited with code 3]');
+  });
+
+  test('Playground has its own output window', async ({ page }) => {
+    await page.click('.playground-tab');
+    await page.evaluate(code => pgCm.setValue(code), TWO_WRITES);
+    await page.click('#pg-btn-run');
+    await expect(page.locator('#pg-output-panel')).toContainText('Hello, World!');
   });
 });
 

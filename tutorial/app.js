@@ -15,6 +15,7 @@ const btnReset     = document.getElementById('btn-reset');
 const regTable     = document.getElementById('reg-table');
 const flagBar      = document.getElementById('flag-bar');
 const stackPanel   = document.getElementById('stack-panel');
+const outputPanel  = document.getElementById('output-panel');
 const stepLog      = document.getElementById('step-log');
 const lessonTitle  = document.getElementById('lesson-title');
 const lessonIntro  = document.getElementById('lesson-intro');
@@ -99,18 +100,7 @@ function renderStack(state) {
     if (v !== 0 || a === state.regs.esp) stackEntries.push([a, v>>>0]);
   }
 
-  const stdoutLines = state.stdout ?? [];
   let html = '';
-
-  if (stdoutLines.length) {
-    html += `<div class="stdout-label">stdout</div>`;
-    html += stdoutLines.map(l =>
-      `<div class="stdout-line">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'↵')}</div>`
-    ).join('');
-    if (state.exitCode !== null && state.exitCode !== undefined)
-      html += `<div class="stdout-exit">exit code: ${state.exitCode}</div>`;
-    html += '<hr class="stack-sep">';
-  }
 
   if (!stackEntries.length) {
     html += '<span class="empty-note">Stack is empty</span>';
@@ -134,6 +124,25 @@ function renderState(state, prevState) {
   renderRegs(state, prevState);
   renderFlags(state, prevState);
   renderStack(state);
+  renderOutput(outputPanel, state);
+}
+
+// Output window: everything the program wrote, joined the way a terminal shows it
+// (two writes without a newline land on one line). Shared with the Playground.
+function renderOutput(el, state) {
+  const out = (state.stdout ?? []).join('');
+  const exited = state.exitCode !== null && state.exitCode !== undefined;
+  if (!out && !exited) {
+    el.innerHTML = '<span class="empty-note">No output yet. Print with sys_write: eax = 4, ebx = 1, ecx = buffer, edx = length, int 0x80.</span>';
+    return;
+  }
+  el.textContent = out;
+  if (exited) {
+    const x = document.createElement('div');
+    x.className = 'output-exit';
+    x.textContent = `[process exited with code ${state.exitCode}]`;
+    el.append(x);
+  }
 }
 
 // ── Line highlighting via CodeMirror API ──────────────────────────────────────

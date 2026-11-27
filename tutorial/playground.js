@@ -118,6 +118,7 @@ const pgErrorBanner= document.getElementById('pg-error-banner');
 const pgRegTable   = document.getElementById('pg-reg-table');
 const pgFlagBar    = document.getElementById('pg-flag-bar');
 const pgStackPanel = document.getElementById('pg-stack-panel');
+const pgOutputPanel = document.getElementById('pg-output-panel');
 const pgStepLog    = document.getElementById('pg-step-log');
 const pgSnippets   = document.getElementById('pg-snippets');
 
@@ -157,17 +158,7 @@ function pgRenderStack(state) {
     if (v !== 0 || a === state.regs.esp) entries.push([a, v>>>0]);
   }
 
-  const stdout = state.stdout ?? [];
   let html = '';
-  if (stdout.length) {
-    html += `<div class="stdout-label">stdout</div>`;
-    html += stdout.map(l =>
-      `<div class="stdout-line">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'↵')}</div>`
-    ).join('');
-    if (state.exitCode !== null && state.exitCode !== undefined)
-      html += `<div class="stdout-exit">exit code: ${state.exitCode}</div>`;
-    html += '<hr class="stack-sep">';
-  }
   if (!entries.length) {
     html += '<span class="empty-note">Stack is empty</span>';
   } else {
@@ -189,6 +180,7 @@ function pgRenderState(state, prev) {
   pgRenderRegs(state, prev);
   pgRenderFlags(state, prev);
   pgRenderStack(state);
+  renderOutput(pgOutputPanel, state);
 }
 
 function pgClearHighlight() {
