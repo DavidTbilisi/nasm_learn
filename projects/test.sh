@@ -44,4 +44,22 @@ for n in 1 30 200; do
 done
 ./life /nonexistent 1 2>/dev/null; check "life missing file exits 1" "$?" "1"
 
+# ── httpd: real HTTP over localhost ──
+port=$((20000 + RANDOM % 20000))
+./httpd $port > "$tmp/httpd.log" & pid=$!
+for _ in $(seq 50); do curl -s -o /dev/null "http://127.0.0.1:$port/" 2>/dev/null && break; sleep 0.05; done
+# the probe above may have counted as visitor 1, so compare two consecutive hits
+a=$(curl -s "http://127.0.0.1:$port/" | grep -o 'visitor #[0-9]*' | tr -dc 0-9)
+b=$(curl -s "http://127.0.0.1:$port/" | grep -o 'visitor #[0-9]*' | tr -dc 0-9)
+check "httpd counter increments" "$((b - a))" "1"
+check "httpd 200 status" "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/")" "200"
+check "httpd 404 for other paths" "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/favicon.ico")" "404"
+for _ in 1 2 3; do  # clients that hang up without reading must not kill the server (SIGPIPE)
+  exec 3<>"/dev/tcp/127.0.0.1/$port"; printf 'GET / HTTP/1.0\r\n\r\n' >&3; exec 3>&-
+done
+check "httpd survives hung-up clients" "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/")" "200"
+check "httpd banner" "$(cat "$tmp/httpd.log")" "listening on http://127.0.0.1:$port/"
+./httpd $port 2>/dev/null; check "httpd busy port exits 1" "$?" "1"
+kill $pid 2>/dev/null; wait $pid 2>/dev/null
+
 exit $fail
