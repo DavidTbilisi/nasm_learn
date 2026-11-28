@@ -100,7 +100,6 @@ done:
 
 // ── Playground state ──────────────────────────────────────────────────────────
 
-const pgSim = new NASMSimulator();
 let pgCm        = null;   // lazy-init CodeMirror
 let pgResult    = null;
 let pgStepIdx   = -1;
@@ -118,27 +117,12 @@ const pgErrorBanner= document.getElementById('pg-error-banner');
 const pgRegTable   = document.getElementById('pg-reg-table');
 const pgFlagBar    = document.getElementById('pg-flag-bar');
 const pgStackPanel = document.getElementById('pg-stack-panel');
+const pgMemPanel   = document.getElementById('pg-mem-panel');
 const pgOutputPanel = document.getElementById('pg-output-panel');
 const pgStepLog    = document.getElementById('pg-step-log');
 const pgSnippets   = document.getElementById('pg-snippets');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function pgHex(n)      { return '0x' + (n >>> 0).toString(16).toUpperCase().padStart(8,'0'); }
-function pgHexShort(n) { return '0x' + (n >>> 0).toString(16).toUpperCase(); }
-
-function pgRenderRegs(state, prev) {
-  const NAMES = ['eax','ebx','ecx','edx','esi','edi','esp','ebp'];
-  pgRegTable.innerHTML = NAMES.map(r => {
-    const val     = state.regs[r];
-    const changed = prev && prev.regs[r] !== val;
-    return `<tr class="${changed ? 'changed' : ''}">
-      <td class="reg-name">${r.toUpperCase()}</td>
-      <td class="reg-hex">${pgHex(val)}</td>
-      <td class="reg-dec">${val >>> 0}</td>
-    </tr>`;
-  }).join('');
-}
 
 function pgRenderFlags(state, prev) {
   pgFlagBar.innerHTML = ['zf','cf','sf','of','df'].map(f => {
@@ -150,36 +134,11 @@ function pgRenderFlags(state, prev) {
   }).join('');
 }
 
-function pgRenderStack(state) {
-  const entries = [];
-  for (let a = 0x2000 - 4; a >= state.regs.esp && a >= 0; a -= 4) {
-    const v = (state.mem[a]??0) | ((state.mem[a+1]??0)<<8) |
-              ((state.mem[a+2]??0)<<16) | ((state.mem[a+3]??0)<<24);
-    if (v !== 0 || a === state.regs.esp) entries.push([a, v>>>0]);
-  }
-
-  let html = '';
-  if (!entries.length) {
-    html += '<span class="empty-note">Stack is empty</span>';
-  } else {
-    html += entries.map(([addr, val]) => {
-      const isEsp = addr === state.regs.esp;
-      const isEbp = addr === state.regs.ebp;
-      const label = isEsp ? ' ← ESP' : (isEbp ? ' ← EBP' : '');
-      return `<div class="stack-row${isEsp ? ' stack-top' : ''}">
-        <span class="stack-addr">${pgHexShort(addr)}</span>
-        <span class="stack-val">${pgHex(val)}</span>
-        <span class="stack-label">${label}</span>
-      </div>`;
-    }).join('');
-  }
-  pgStackPanel.innerHTML = html;
-}
-
 function pgRenderState(state, prev) {
-  pgRenderRegs(state, prev);
+  renderRegs(pgRegTable, state, prev);
   pgRenderFlags(state, prev);
-  pgRenderStack(state);
+  renderStack(pgStackPanel, state);
+  renderMemory(pgMemPanel, state, prev, pgResult?.dataLabels);
   renderOutput(pgOutputPanel, state);
 }
 
@@ -228,16 +187,6 @@ function pgUpdateCounter() {
   pgStepCtr.textContent = `Step ${cur} / ${pgResult.history.length}`;
 }
 
-// ── Blank state ───────────────────────────────────────────────────────────────
-
-function pgBlank() {
-  return {
-    regs:  { eax:0,ebx:0,ecx:0,edx:0,esi:0,edi:0,esp:0x2000,ebp:0x2000 },
-    flags: { zf:0, cf:0, sf:0, of:0, df:0 },
-    mem:   {}, stdout: [], exitCode: null,
-  };
-}
-
 // ── Controls ──────────────────────────────────────────────────────────────────
 
 function pgDoReset() {
@@ -247,18 +196,28 @@ function pgDoReset() {
   pgStepLog.innerHTML = '';
   pgClearHighlight();
   pgStepCtr.textContent = '';
-  pgRenderState(pgBlank(), null);
+  pgRenderState(blankState(pgCm.getValue()), null);
   pgBtnPrev.disabled = true;
   pgBtnStep.textContent = 'Step ▶';
 }
 
 function pgDoRun() {
-  pgHideError();
+  // Mid-run (stepping or paused at a breakpoint), Run continues from the current step.
+  if (!pgResult || pgStepIdx >= pgResult.history.length - 1) {
+    pgHideError();
+    pgStepLog.innerHTML = '';
+    pgResult = NASMSimulator.create(pgCm.getValue()).runAll(pgCm.getValue());
+    pgStepIdx = -1;
+    if (pgResult.error) { pgShowError(pgResult.error); pgResult = null; return; }
+    if (!pgResult.history.length) { pgAppendLog('No instructions executed.', 'log-warn'); pgResult = null; return; }
+  }
+  const bp = nextBreakpoint(pgCm, pgResult, pgStepIdx);
+  if (bp >= 0) {
+    pgGotoStep(bp);
+    pgAppendLog(`● breakpoint, line ${pgResult.history[bp].instr.line + 1}. Run again to continue.`, 'log-info');
+    return;
+  }
   pgStepLog.innerHTML = '';
-  pgResult = pgSim.runAll(pgCm.getValue());
-
-  if (pgResult.error) { pgShowError(pgResult.error); return; }
-  if (!pgResult.history.length) { pgAppendLog('No instructions executed.', 'log-warn'); return; }
   if (pgResult.hitLimit) pgAppendLog('⚠ Step limit reached (possible infinite loop).', 'log-warn');
 
   const last = pgResult.history[pgResult.history.length - 1];
@@ -279,7 +238,7 @@ function pgDoStep() {
   if (!pgResult || pgStepIdx >= pgResult.history.length - 1) {
     pgHideError();
     pgStepLog.innerHTML = '';
-    pgResult = pgSim.runAll(pgCm.getValue());
+    pgResult = NASMSimulator.create(pgCm.getValue()).runAll(pgCm.getValue());
     if (pgResult.error) { pgShowError(pgResult.error); pgResult = null; return; }
     if (!pgResult.history.length) { pgAppendLog('No instructions.', 'log-warn'); return; }
     pgStepIdx = 0;
@@ -312,7 +271,11 @@ function pgDoStep() {
 
 function pgDoPrev() {
   if (!pgResult || pgStepIdx <= 0) return;
-  pgStepIdx--;
+  pgGotoStep(pgStepIdx - 1);
+}
+
+function pgGotoStep(i) {
+  pgStepIdx = i;
   const entry   = pgResult.history[pgStepIdx];
   const prevEnt = pgStepIdx > 0 ? pgResult.history[pgStepIdx - 1] : null;
   pgRenderState(entry.before, prevEnt ? prevEnt.before : null);
@@ -367,6 +330,7 @@ function pgInitEditor() {
   });
 
   pgBtnRun.addEventListener('click', pgDoRun);
+  enableBreakpoints(pgCm);
   pgBtnStep.addEventListener('click', () => {
     if (pgResult && pgStepIdx >= pgResult.history.length - 1) pgDoReset();
     else pgDoStep();

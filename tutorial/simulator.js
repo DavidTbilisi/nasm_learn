@@ -48,43 +48,35 @@ class NASMSimulator {
           if (t === undefined) throw new Error(`Unknown label: ${args[0]}`);
           this.ip = t; steps++; continue;
         }
-        const CONDS = ['je','jz','jne','jnz','jg','jnle','jge','jnl',
-                       'jl','jnge','jle','jng','ja','jnbe','jae','jnb',
-                       'jb','jnae','jbe','jna','js','jns'];
-        if (CONDS.includes(op)) {
+        if (NASMSimulator.CONDS.has(op)) {
           const taken = this._condMet(op);
           this.ip = taken ? (labels[args[0]] ?? (() => { throw new Error(`Unknown label: ${args[0]}`); })()) : this.ip+1;
           steps++; continue;
         }
         if (op === 'loop') {
-          this.regs.ecx = (this.regs.ecx-1)>>>0;
-          const taken = this.regs.ecx !== 0;
+          const taken = this._loopDec() !== 0;
           this.ip = taken ? (labels[args[0]] ?? this.ip+1) : this.ip+1;
           steps++; continue;
         }
         if (op === 'loope' || op === 'loopz') {
-          this.regs.ecx = (this.regs.ecx-1)>>>0;
-          const taken = this.regs.ecx !== 0 && this.flags.zf === 1;
+          const taken = this._loopDec() !== 0 && this.flags.zf === 1;
           this.ip = taken ? (labels[args[0]] ?? this.ip+1) : this.ip+1;
           steps++; continue;
         }
         if (op === 'loopne' || op === 'loopnz') {
-          this.regs.ecx = (this.regs.ecx-1)>>>0;
-          const taken = this.regs.ecx !== 0 && this.flags.zf === 0;
+          const taken = this._loopDec() !== 0 && this.flags.zf === 0;
           this.ip = taken ? (labels[args[0]] ?? this.ip+1) : this.ip+1;
           steps++; continue;
         }
         if (op === 'call') {
           const t = labels[args[0]];
           if (t === undefined) throw new Error(`Unknown label: ${args[0]}`);
-          this.regs.esp = (this.regs.esp-4)>>>0;
-          this.writeDword(this.regs.esp, this.ip+1);
+          this._push(this.ip+1);
           this.callStack.push(this.ip+1);
           this.ip = t; steps++; continue;
         }
         if (op === 'ret') {
-          const retAddr = this.readDword(this.regs.esp);
-          this.regs.esp = (this.regs.esp+4)>>>0;
+          const retAddr = this._pop();
           if (retAddr === undefined || this.callStack.length === 0) { this.halted = true; break; }
           this.callStack.pop();
           this.ip = retAddr; steps++; continue;
@@ -100,6 +92,18 @@ class NASMSimulator {
     }
     if (this.ip >= instructions.length) this.halted = true;
     return { steps, halted: this.halted, error: this.lastError };
+  }
+
+  // ── Width hooks: return-address push/pop and the LOOP counter ─────────────────
+  _push(v) { this.regs.esp = (this.regs.esp-4)>>>0; this.writeDword(this.regs.esp, v); }
+  _pop()   { const v = this.readDword(this.regs.esp); this.regs.esp = (this.regs.esp+4)>>>0; return v; }
+  _loopDec() { return this.regs.ecx = (this.regs.ecx-1)>>>0; }
+  _regNum(name) { return Number(this.getReg(name)); }   // register value as a plain number, for addresses
+
+  // `bits 64` anywhere in the source selects the 64-bit simulator (simulator64.js).
+  static create(code) {
+    return /^\s*bits\s+64\b/im.test(code) && typeof NASMSimulator64 !== 'undefined'
+      ? new NASMSimulator64() : new NASMSimulator();
   }
 
   // ── Byte-level memory helpers ────────────────────────────────────────────────
@@ -222,7 +226,7 @@ class NASMSimulator {
 
         if (directive.startsWith('res')) {
           // resb N / resw N / resd N
-          const mult = directive === 'resb' ? 1 : directive === 'resw' ? 2 : 4;
+          const mult = { resb: 1, resw: 2, resd: 4, resq: 8 }[directive];
           const count = (this._parseImm(rest.trim()) ?? 1) * mult;
           dataLabels[lbl] = dataPtr;
           // zero-fill the reserved space
@@ -271,7 +275,7 @@ class NASMSimulator {
   // Parse a db/dw/dd value list into an array of bytes
   _parseDataValues(rest, directive) {
     const bytes = [];
-    const bytesPerUnit = directive === 'db' ? 1 : directive === 'dw' ? 2 : 4;
+    const bytesPerUnit = { db: 1, dw: 2, dd: 4, dq: 8 }[directive];
 
     // Split on commas, but not inside quotes
     const parts = [];
@@ -291,8 +295,8 @@ class NASMSimulator {
         const str = part.slice(1,-1);
         for (const ch of str) bytes.push(ch.charCodeAt(0) & 0xFF);
       } else {
-        const v = this._parseImm(part) ?? 0;
-        for (let i=0; i<bytesPerUnit; i++) bytes.push((v >>> (i*8)) & 0xFF);
+        const v = BigInt.asUintN(64, this._parseImmBig(part) ?? 0n);
+        for (let i=0; i<bytesPerUnit; i++) bytes.push(Number((v >> BigInt(i*8)) & 0xFFn));
       }
     }
     return bytes;
@@ -321,17 +325,29 @@ class NASMSimulator {
     if (/^[0-9a-f]+h$/i.test(s))    return parseInt(s.slice(0,-1), 16); // FFh
     if (/^[0-7]+[oq]$/i.test(s))    return parseInt(s.slice(0,-1), 8);  // 77o
     if (/^[+-]?\d+$/.test(s))       return parseInt(s, 10);
+    const ch = s.match(/^(['"`])(.{1,4})\1$/);                       // 'A' or 'ab': NASM packs chars little-endian
+    if (ch) return [...ch[2]].reduce((v, c, i) => v + (c.charCodeAt(0) & 0xFF) * 2 ** (8 * i), 0);
     return null;
   }
 
+  // Same syntax as _parseImm, exact to 64 bits (parseInt loses precision past 2^53).
+  _parseImmBig(s) {
+    s = s.trim();
+    if (/^[+-]?\d+$/.test(s) || /^0x[0-9a-f]+$/i.test(s) || /^0b[01]+$/i.test(s)) return BigInt(s);
+    if (/^[0-9a-f]+h$/i.test(s)) return BigInt('0x' + s.slice(0, -1));
+    if (/^[01]+b$/i.test(s))     return BigInt('0b' + s.slice(0, -1));
+    const n = this._parseImm(s);
+    return n === null ? null : BigInt(n);
+  }
+
   _resolveAddr(expr, labels) {
-    expr = expr.trim();
-    if (this.isReg(expr)) return this.getReg(expr);
+    expr = expr.trim().replace(/^rel\s+/i, '');
+    if (this.isReg(expr)) return this._regNum(expr);
 
     // Resolve a single term: register, label, or immediate
     const term = (s) => {
       s = s.trim();
-      if (this.isReg(s)) return this.getReg(s);
+      if (this.isReg(s)) return this._regNum(s);
       const imm = this._parseImm(s);
       if (imm !== null) return imm;
       if (labels && labels[s] !== undefined) return labels[s];
@@ -356,16 +372,28 @@ class NASMSimulator {
     throw new Error(`Cannot resolve address: ${expr}`);
   }
 
+  readWord(addr) { return this.readByte(addr) | (this.readByte(addr+1) << 8); }
+
+  // Operand width in bits: from a byte/word prefix or the register name, else 32.
+  _opSize(arg) {
+    arg = arg.trim().toLowerCase();
+    const m = arg.match(/^(byte|word|dword)\s+/);
+    if (m) return { byte: 8, word: 16, dword: 32 }[m[1]];
+    if (arg in NASMSimulator.REG8L || arg in NASMSimulator.REG8H) return 8;
+    if (arg in NASMSimulator.REG16) return 16;
+    return 32;
+  }
+
   getOperand(arg, labels) {
     const origArg = arg.trim();
-    const isByte = /^byte\s+/i.test(origArg);
+    const isByte = /^byte\s+/i.test(origArg), isWord = /^word\s+/i.test(origArg);
     arg = origArg.replace(/^(byte|word|dword)\s+/i, '');
     if (this.isReg(arg)) return this.getReg(arg);
     const imm = this._parseImm(arg);
     if (imm !== null) return imm >>> 0;
     if (arg.startsWith('[') && arg.endsWith(']')) {
       const addr = this._resolveAddr(arg.slice(1,-1), labels);
-      return isByte ? this.readByte(addr) : this.readDword(addr);
+      return isByte ? this.readByte(addr) : isWord ? this.readWord(addr) : this.readDword(addr);
     }
     if (labels && labels[arg] !== undefined) return labels[arg] >>> 0;
     throw new Error(`Cannot resolve operand: ${arg}`);
@@ -373,13 +401,15 @@ class NASMSimulator {
 
   setOperand(arg, val, labels) {
     const origArg = arg.trim();
-    const isByte = /^byte\s+/i.test(origArg);
+    const isByte = /^byte\s+/i.test(origArg), isWord = /^word\s+/i.test(origArg);
     arg = origArg.replace(/^(byte|word|dword)\s+/i, '');
     val = val >>> 0;
     if (this.isReg(arg)) { this.setReg(arg, val); return; }
     if (arg.startsWith('[') && arg.endsWith(']')) {
       const addr = this._resolveAddr(arg.slice(1,-1), labels);
-      if (isByte) this.writeByte(addr, val); else this.writeDword(addr, val);
+      if (isByte) this.writeByte(addr, val);
+      else if (isWord) { this.writeByte(addr, val); this.writeByte(addr+1, val >>> 8); }
+      else this.writeDword(addr, val);
       return;
     }
     throw new Error(`Cannot set operand: ${arg}`);
@@ -405,6 +435,11 @@ class NASMSimulator {
     }
   }
 
+  // Conditional jumps; setCC / cmovCC reuse the same condition codes ('sete' → 'je').
+  static CONDS = new Set(['je','jz','jne','jnz','jg','jnle','jge','jnl',
+                          'jl','jnge','jle','jng','ja','jnbe','jae','jnb',
+                          'jb','jnae','jbe','jna','js','jns','jc','jnc','jo','jno','jecxz']);
+
   _condMet(op) {
     const { zf, cf, sf, of } = this.flags;
     switch (op) {
@@ -415,8 +450,11 @@ class NASMSimulator {
       case 'jl':  case 'jnge': return sf !== of;
       case 'jle': case 'jng':  return zf === 1 || sf !== of;
       case 'ja':  case 'jnbe': return cf === 0 && zf === 0;
-      case 'jae': case 'jnb':  return cf === 0;
-      case 'jb':  case 'jnae': return cf === 1;
+      case 'jae': case 'jnb': case 'jnc': return cf === 0;
+      case 'jb':  case 'jnae': case 'jc':  return cf === 1;
+      case 'jo':               return of === 1;
+      case 'jno':              return of === 0;
+      case 'jecxz':            return this.regs.ecx === 0;
       case 'jbe': case 'jna':  return cf === 1 || zf === 1;
       case 'js':               return sf === 1;
       case 'jns':              return sf === 0;
@@ -436,6 +474,8 @@ class NASMSimulator {
       case 'hlt': this.halted = true; break;
 
       case 'mov': s(0, g(1)); break;
+      case 'movzx': s(0, g(1)); break;   // g() already reads only the source's 8/16 bits
+      case 'movsx': { const bits=this._opSize(args[1]); s(0, (g(1) << (32-bits)) >> (32-bits)); break; }
       case 'xchg': { const t = g(0); s(0, g(1)); s(1, t); break; }
       case 'lea': {
         const addr = this._resolveAddr(args[1].replace(/^\[|\]$/g,''), labels);
@@ -447,6 +487,9 @@ class NASMSimulator {
       // INC/DEC do NOT touch CF — preserve it across the flag update.
       case 'inc': { const a=g(0),r=(a+1)>>>0; const cf=this.flags.cf; this._updateFlags(r,'add',a,1); this.flags.cf=cf; s(0,r); break; }
       case 'dec': { const a=g(0),r=(a-1)>>>0; const cf=this.flags.cf; this._updateFlags(r,'sub',a,1); this.flags.cf=cf; s(0,r); break; }
+      // ADC/SBB fold the incoming CF into the sum, so CF must come from the full-width result.
+      case 'adc': { const a=g(0),b=g(1),full=a+b+this.flags.cf,r=full>>>0; this._updateFlags(r,'add',a,b); this.flags.cf=full>0xFFFFFFFF?1:0; s(0,r); break; }
+      case 'sbb': { const a=g(0),b=g(1),c=this.flags.cf,r=(a-b-c)>>>0; this._updateFlags(r,'sub',a,b); this.flags.cf=a<b+c?1:0; s(0,r); break; }
       case 'neg': { const a=g(0),r=(0-a)>>>0; this._updateFlags(r,'sub',0,a); s(0,r); break; }
 
       // Carry-flag direct manipulation.
@@ -530,6 +573,17 @@ class NASMSimulator {
         this.regs.esp = (this.regs.esp+4)>>>0;
         s(0, v); break;
       }
+      case 'leave':
+        this.regs.esp = this.regs.ebp;
+        this.regs.ebp = this.readDword(this.regs.esp);
+        this.regs.esp = (this.regs.esp+4)>>>0; break;
+      case 'enter': {
+        if (args[1] && g(1) !== 0) throw new Error('enter: only nesting level 0 is supported');
+        this.regs.esp = (this.regs.esp-4)>>>0;
+        this.writeDword(this.regs.esp, this.regs.ebp);
+        this.regs.ebp = this.regs.esp;
+        this.regs.esp = (this.regs.esp - g(0))>>>0; break;
+      }
       case 'pushad':
         for (const r of ['eax','ecx','edx','ebx','esp','ebp','esi','edi']) {
           this.regs.esp = (this.regs.esp-4)>>>0;
@@ -610,8 +664,17 @@ class NASMSimulator {
       case 'repnz_cmpsb': { const d=this.flags.df?-1:1; while(this.regs.ecx){const a=this.readByte(this.regs.esi),b=this.readByte(this.regs.edi),r=(a-b)>>>0;this._updateFlags(r,'sub',a,b);this.regs.esi=(this.regs.esi+d)>>>0;this.regs.edi=(this.regs.edi+d)>>>0;this.regs.ecx=(this.regs.ecx-1)>>>0;if(this.flags.zf)break;}break; }
 
       // Jumps and calls are handled in the run loop
-      default:
+      default: {
+        // setCC r/m8 and cmovCC r32, r/m32 share the jump condition codes.
+        const cc = op.match(/^(set|cmov)(\w+)$/);
+        if (cc && cc[2] !== 'ecxz' && NASMSimulator.CONDS.has('j' + cc[2])) {
+          const met = this._condMet('j' + cc[2]);
+          if (cc[1] === 'set') this.setOperand(/^\[/.test(args[0].trim()) ? 'byte ' + args[0] : args[0], met ? 1 : 0, labels);
+          else if (met) s(0, g(1));
+          break;
+        }
         throw new Error(`Unknown instruction: ${op}`);
+      }
     }
   }
 
@@ -653,10 +716,7 @@ class NASMSimulator {
           this.ip = t; steps++; continue;
         }
 
-        const CONDS = ['je','jz','jne','jnz','jg','jnle','jge','jnl',
-                       'jl','jnge','jle','jng','ja','jnbe','jae','jnb',
-                       'jb','jnae','jbe','jna','js','jns'];
-        if (CONDS.includes(op)) {
+        if (NASMSimulator.CONDS.has(op)) {
           const taken = this._condMet(op);
           const t = taken ? (labels[args[0]] ?? (() => { throw new Error(`Unknown label: ${args[0]}`); })()) : this.ip+1;
           history.push({ before, instr, nextIp: t, branch: { taken, target: args[0] } });
@@ -664,23 +724,20 @@ class NASMSimulator {
         }
 
         if (op === 'loop') {
-          this.regs.ecx = (this.regs.ecx-1)>>>0;
-          const taken = this.regs.ecx !== 0;
+          const taken = this._loopDec() !== 0;
           const t = taken ? (labels[args[0]] ?? (() => { throw new Error(`Unknown label: ${args[0]}`); })()) : this.ip+1;
           history.push({ before, instr, nextIp: t, branch: { taken, target: args[0] } });
           this.ip = t; steps++; continue;
         }
 
         if (op === 'loope' || op === 'loopz') {
-          this.regs.ecx = (this.regs.ecx-1)>>>0;
-          const taken = this.regs.ecx !== 0 && this.flags.zf === 1;
+          const taken = this._loopDec() !== 0 && this.flags.zf === 1;
           const t = taken ? (labels[args[0]] ?? this.ip+1) : this.ip+1;
           history.push({ before, instr, nextIp: t }); this.ip = t; steps++; continue;
         }
 
         if (op === 'loopne' || op === 'loopnz') {
-          this.regs.ecx = (this.regs.ecx-1)>>>0;
-          const taken = this.regs.ecx !== 0 && this.flags.zf === 0;
+          const taken = this._loopDec() !== 0 && this.flags.zf === 0;
           const t = taken ? (labels[args[0]] ?? this.ip+1) : this.ip+1;
           history.push({ before, instr, nextIp: t }); this.ip = t; steps++; continue;
         }
@@ -688,16 +745,14 @@ class NASMSimulator {
         if (op === 'call') {
           const t = labels[args[0]];
           if (t === undefined) throw new Error(`Unknown label: ${args[0]}`);
-          this.regs.esp = (this.regs.esp-4)>>>0;
-          this.writeDword(this.regs.esp, this.ip+1);
+          this._push(this.ip+1);
           this.callStack.push(this.ip+1);
           history.push({ before, instr, nextIp: t });
           this.ip = t; steps++; continue;
         }
 
         if (op === 'ret') {
-          const retAddr = this.readDword(this.regs.esp);
-          this.regs.esp = (this.regs.esp+4)>>>0;
+          const retAddr = this._pop();
           if (retAddr === undefined || this.callStack.length === 0) {
             history.push({ before, instr, nextIp: -1 });
             this.halted = true; break;
@@ -719,9 +774,11 @@ class NASMSimulator {
     }
 
     return {
+      mode: this.bits ?? 32,
       history,
       instructions,
       labels,
+      dataLabels: parsed.dataLabels,
       finalState: snap(),
       steps,
       hitLimit: steps >= MAX

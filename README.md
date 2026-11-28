@@ -25,7 +25,7 @@ An interactive x86 assembly learning environment that runs entirely in the brows
 - **Embedded systems / firmware developers** who read compiler output and want a faster mental model.
 - **Retro-gaming / demoscene hobbyists** (NES, C64, Atari) who want a modern stepping debugger to prototype routines in.
 
-## What you'll be able to do after the 12 lessons
+## What you'll be able to do after the 16 lessons
 
 - Read disassembled C output and follow the control flow.
 - Set a breakpoint in real GDB+GEF on a Linux binary and step through it.
@@ -44,8 +44,11 @@ An interactive x86 assembly learning environment that runs entirely in the brows
 
 ## How the tool gets you there
 
-- **12 guided lessons** covering registers, arithmetic, flags, memory, the stack, loops, functions, strings, arrays, bitwise ops, and system calls.
-- **Step-by-step debugger** — run, step forward/backward through instructions, see registers, flags, and stack update live.
+- **16 guided lessons** covering registers, arithmetic, flags, memory, the stack, loops, functions, strings, arrays, bitwise ops, system calls, endianness, buffer overflows, and x86-64 with the System V ABI.
+- **Graded exercises**: every lesson ends with an exercise and a **Check ✓** button that runs your code and names what is wrong (`EDX = 0, expected 300`). Passed lessons get a ✓ on their tab, and the app reopens the last lesson you were on.
+- **Step-by-step debugger**: run, step forward/backward through instructions, see registers, flags, and stack update live. Click the gutter to set **breakpoints** (Run stops before that line; Run again continues), and watch `.data`/`.bss` in the **memory window** (hex + ASCII, changed bytes highlighted).
+- **32-bit and 64-bit**: put `bits 64` at the top and the simulator switches to x86-64: RAX…R15, 8-byte stack slots, `syscall` (write = 1, exit = 60). The 64-bit mode covers a teaching subset of the instruction set.
+- **Checked against a real CPU**: `npm run check:fidelity` runs every case in `scripts/fidelity/cases.js` (32- and 64-bit) on Unicorn and diffs registers and flags against the simulator.
 - **Playground** — free-form editor to write and debug any assembly you like, with 6 built-in snippets and auto-save.
 - **Quiz mode** — multiple-choice and type-in questions with instant feedback and a progress bar.
 - **Gym mode** — timed drill workouts across 7 topic categories to build fluency under pressure.

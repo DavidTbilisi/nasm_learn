@@ -26,7 +26,8 @@ import sys
 import tempfile
 
 try:
-    from unicorn import Uc, UC_ARCH_X86, UC_MODE_32, UcError
+    from unicorn import Uc, UC_ARCH_X86, UC_MODE_32, UC_MODE_64, UcError
+    from unicorn import x86_const
     from unicorn.x86_const import (
         UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, UC_X86_REG_EDX,
         UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_ESP, UC_X86_REG_EBP,
@@ -48,13 +49,19 @@ REGS = {
     "esp": UC_X86_REG_ESP, "ebp": UC_X86_REG_EBP,
 }
 
+# "bits": 64 cases run in long mode and compare all 16 GPRs (printed as hex strings,
+# since JSON numbers lose precision past 2^53).
+REGS64 = {n: getattr(x86_const, f"UC_X86_REG_{n.upper()}") for n in
+          ["rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "rbp",
+           "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]}
+
 CODE_BASE  = 0x1000
 STACK_BASE = 0x4000
 STACK_SIZE = 0x4000  # ends at 0x8000
 DEFAULT_STACK_TOP = STACK_BASE + STACK_SIZE - 4
 
 
-def assemble(source: str) -> bytes:
+def assemble(source: str, bits: int = 32) -> bytes:
     # Use the real nasm binary so the harness validates exactly the dialect
     # the gym uses. Keystone's "NASM" syntax mode silently turns `mov eax, 10`
     # into `mov eax, 0x10` — wrong default radix — so it's unusable here.
@@ -62,7 +69,7 @@ def assemble(source: str) -> bytes:
         asm_path = os.path.join(d, "snippet.asm")
         bin_path = os.path.join(d, "snippet.bin")
         with open(asm_path, "w", encoding="utf-8") as f:
-            f.write("bits 32\n")
+            f.write(f"bits {bits}\n")
             f.write(source)
             f.write("\n")
         proc = subprocess.run(
@@ -76,30 +83,36 @@ def assemble(source: str) -> bytes:
 
 
 def run(case: dict) -> dict:
-    code = assemble(case["code"])
+    bits = case.get("bits", 32)
+    code = assemble(case["code"], bits)
     regs_in = case.get("regs", {}) or {}
     stack_top = case.get("stack_top", DEFAULT_STACK_TOP)
+    regs = REGS64 if bits == 64 else REGS
+    mask = (1 << bits) - 1
+    sp, bp = ("rsp", "rbp") if bits == 64 else ("esp", "ebp")
 
-    mu = Uc(UC_ARCH_X86, UC_MODE_32)
+    mu = Uc(UC_ARCH_X86, UC_MODE_64 if bits == 64 else UC_MODE_32)
     mu.mem_map(CODE_BASE, 0x1000)
     mu.mem_map(STACK_BASE, STACK_SIZE)
     mu.mem_write(CODE_BASE, code)
 
     # Default ESP to top of mapped stack if not provided.
-    if "esp" not in regs_in:
-        mu.reg_write(UC_X86_REG_ESP, stack_top)
-    if "ebp" not in regs_in:
-        mu.reg_write(UC_X86_REG_EBP, stack_top)
+    if sp not in regs_in:
+        mu.reg_write(regs[sp], stack_top)
+    if bp not in regs_in:
+        mu.reg_write(regs[bp], stack_top)
 
     for name, val in regs_in.items():
-        if name not in REGS:
+        if name not in regs:
             raise ValueError(f"unknown register: {name}")
-        mu.reg_write(REGS[name], val & 0xFFFFFFFF)
+        mu.reg_write(regs[name], val & mask)
 
     mu.emu_start(CODE_BASE, CODE_BASE + len(code), timeout=2_000_000, count=10000)
 
     eflags = mu.reg_read(UC_X86_REG_EFLAGS)
-    out_regs = {name: mu.reg_read(uc_id) & 0xFFFFFFFF for name, uc_id in REGS.items()}
+    out_regs = {name: mu.reg_read(uc_id) & mask for name, uc_id in regs.items()}
+    if bits == 64:
+        out_regs = {name: hex(v) for name, v in out_regs.items()}
     flags = {
         "cf": (eflags >> 0)  & 1,
         "zf": (eflags >> 6)  & 1,
