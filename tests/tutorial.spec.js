@@ -955,6 +955,28 @@ test.describe('ASM / C view', () => {
     expect([...new Set(seen)].sort((a, b) => a - b)).toEqual([...Array(total).keys()]);
   });
 
+  test('3D view: last step replays two instructions without the first one painting over the second', async ({ page }) => {
+    await page.click('#code-view [data-view="cpu"]');
+    const total = await page.evaluate(() => sim.runAll(cm.getValue()).history.length);
+    for (let n = 0; n < total - 1; n++) await page.click('#btn-step');  // Ready + every step but the last
+    await page.evaluate(() => {
+      // Count scene repaints that land while the final Fetch card is showing (the paint that opens it is in the same batch as the card change).
+      window.__clobber = 0;
+      const meta = document.querySelector('#cpu-pane .xp-meta');
+      let fetchOpen = false;
+      new MutationObserver(recs => {
+        const isFinalFetch = /phase 1 \//.test(meta.textContent) && meta.textContent.startsWith(`Instruction ${runResult.history.length} /`);
+        const cardChanged = recs.some(r => r.target === meta || r.target.parentNode === meta);
+        if (isFinalFetch && fetchOpen && !cardChanged && recs.some(r => r.attributeName === 'data-sig')) window.__clobber++;
+        fetchOpen = isFinalFetch;
+      }).observe(document.querySelector('#cpu-pane'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-sig'] });
+    });
+    await page.click('#btn-step');
+    await expect(page.locator('#cpu-pane .xp-meta')).toHaveText(new RegExp(`^Instruction ${total} / ${total} · phase 1 / [2-9]$`), { timeout: 8000 });  // counted per instruction
+    await expect(page.locator('#cpu-pane .xp-meta')).not.toContainText('phase 1 /', { timeout: 3000 });
+    expect(await page.evaluate(() => window.__clobber)).toBe(0);
+  });
+
   test('3D view: ESP and EBP carry their mnemonic tooltips', async ({ page }) => {
     await page.locator('.tab-btn').nth(10).click();                      // lesson 11: function frame
     await page.click('#code-view [data-view="cpu"]');
