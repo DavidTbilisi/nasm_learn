@@ -425,9 +425,9 @@
       </div>`;
     const $ = s => host.querySelector(s);
     const paint = stage($('.xp-layer'));
-    let timers = [], cur = null;
+    let timers = [], cur = null, settleT = 0;
 
-    const stop = () => { timers.forEach(clearTimeout); timers = []; };
+    const stop = () => { timers.forEach(clearTimeout); timers = []; clearTimeout(settleT); };
     function card(meta, title, text) {
       $('.xp-meta').textContent = meta;
       $('.xp-title').textContent = title;
@@ -440,11 +440,12 @@
     }
     function showPhase(i, auto) {
       const ph = cur.list[i];
+      clearTimeout(settleT);   // a late settle from the previous phase must not paint over this one
       paint(ph.scene);
-      card(`Instruction ${ph.k + 1} / ${cur.n} · phase ${i + 1} / ${cur.list.length}`, ph.title, ph.text);
+      card(`Instruction ${ph.k + 1} / ${cur.n} · phase ${ph.j + 1} / ${ph.m}`, ph.title, ph.text);
       onInstr(ph.k);
       dots(cur.list.length, i);
-      if (ph.settle) timers.push(setTimeout(() => paint(ph.settle), auto ? PHASE_MS : 500));
+      if (ph.settle) settleT = setTimeout(() => paint(ph.settle), auto ? PHASE_MS : 500);
     }
     function play(animate) {
       stop();
@@ -474,7 +475,7 @@
         dots(0); $('.cpu3d-replay').disabled = true;
         return;
       }
-      cur = { list: ks.flatMap(k => phases(run, k).map(ph => ({ ...ph, k }))), n: run.history.length };
+      cur = { list: ks.flatMap(k => phases(run, k).map((ph, j, all) => ({ ...ph, k, j, m: all.length }))), n: run.history.length };
       $('.cpu3d-replay').disabled = false;
       play(animate);
     }
