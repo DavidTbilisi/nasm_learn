@@ -9,6 +9,7 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 const NASMSimulator = require(path.join(__dirname, '..', '..', 'tutorial', 'simulator.js'));
+const NASMSimulator64 = require(path.join(__dirname, '..', '..', 'tutorial', 'simulator64.js'));
 const cases = require(path.join(__dirname, 'cases.js'));
 
 const RUNNER = path.join(__dirname, 'run_real.py');
@@ -19,10 +20,10 @@ const GREEN = s => `\x1b[32m${s}\x1b[0m`;
 const DIM   = s => `\x1b[2m${s}\x1b[0m`;
 const BOLD  = s => `\x1b[1m${s}\x1b[0m`;
 
-function hex(n) { return '0x' + (n >>> 0).toString(16).toUpperCase().padStart(8, '0'); }
+function hex(n) { return '0x' + n.toString(16).toUpperCase().padStart(8, '0'); }
 
 function runSim(c) {
-  const sim = new NASMSimulator();
+  const sim = c.bits === 64 ? new NASMSimulator64() : new NASMSimulator();
   // gymRun's wrapper — matches how gym.js produces "expected" answers.
   const wrapped = `section .text\nglobal _start\n_start:\n${c.code}\nhlt`;
   // Apply any initial register state by emitting MOVs at the front.
@@ -33,7 +34,7 @@ function runSim(c) {
       prefix += `mov ${r}, ${v >>> 0}\n`;
     }
   }
-  const code = `section .text\nglobal _start\n_start:\n${prefix}${c.code}\nhlt`;
+  const code = `${c.bits === 64 ? 'bits 64\n' : ''}section .text\nglobal _start\n_start:\n${prefix}${c.code}\nhlt`;
   const { finalState } = sim.runAll(code);
   return {
     regs: { ...finalState.regs },
@@ -42,7 +43,7 @@ function runSim(c) {
 }
 
 function runReal(c) {
-  const input = JSON.stringify({ code: c.code, regs: c.regs || {} });
+  const input = JSON.stringify({ code: c.code, regs: c.regs || {}, bits: c.bits || 32 });
   const result = spawnSync(PYTHON, [RUNNER], {
     input,
     encoding: 'utf8',
@@ -58,7 +59,8 @@ function runReal(c) {
 function diff(c, sim, real) {
   const mismatches = [];
   for (const r of c.compare.regs || []) {
-    const a = sim.regs[r] >>> 0, b = real.regs[r] >>> 0;
+    const norm = v => BigInt.asUintN(c.bits || 32, BigInt(v));
+    const a = norm(sim.regs[r]), b = norm(real.regs[r]);
     if (a !== b) mismatches.push({ field: `regs.${r}`, sim: hex(a), real: hex(b) });
   }
   for (const f of c.compare.flags || []) {

@@ -4,7 +4,8 @@
 
 CodeMirror.defineMode('nasm', function () {
   const INSTRUCTIONS = new RegExp(
-    '^(mov[sz]?[bwd]?|add|adc|sub|sbb|mul|imul|div|idiv|inc|dec|neg' +
+    '^(movzx|movsx|mov[sz]?[bwd]?|add|adc|sub|sbb|mul|imul|div|idiv|inc|dec|neg' +
+    '|leave|enter|jecxz|cmov[a-z]+|set[a-z]+' +
     '|and|or|xor|not|shl|sal|shr|sar|ror|rol|rcr|rcl' +
     '|push|pop|pushad|popad|pushfd|popfd' +
     '|call|ret|retn|retf|jmp' +

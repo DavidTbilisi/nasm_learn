@@ -56,9 +56,9 @@ test.describe('Page basics', () => {
     await expect(page.locator('#editor-host .CodeMirror-code')).toContainText('mov eax, 42');
   });
 
-  test('all 21 tabs render (15 lessons + quiz + gym + playground + rank + arcade + foundry)', async ({ page }) => {
+  test('all 22 tabs render (16 lessons + quiz + gym + playground + rank + arcade + foundry)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.tab-btn')).toHaveCount(21);
+    await expect(page.locator('.tab-btn')).toHaveCount(22);
   });
 });
 
@@ -987,7 +987,8 @@ test.describe('ASM / C view', () => {
   });
 
   test('3D CPU builds phases for every instruction in every lesson', async ({ page }) => {
-    const bad = await page.evaluate(() => LESSONS.flatMap(l => {
+    // The 3D CPU draws the 32-bit machine; `bits 64` lessons show a notice instead.
+    const bad = await page.evaluate(() => LESSONS.filter(l => !/^\s*bits\s+64/m.test(l.code)).flatMap(l => {
       const run = sim.runAll(l.code);
       return run.history.map((h, k) => {
         try {

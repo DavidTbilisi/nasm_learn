@@ -49,6 +49,7 @@ int main(void) {
     return 0;                            // hlt
 }`,
     exercise: {
+      expect: { regs: { ebx: 100, ecx: 200, edx: 300 } },
       prompt: 'Modify the code so that EBX ends up holding the value 100 and ECX ends up holding 200. Then set EDX to the sum of EBX and ECX using ADD.',
       hint: 'Use MOV to load the constants, then ADD edx, ecx after setting both.',
       solution: `section .text
@@ -134,6 +135,7 @@ int main(void) {
     return 0;                  // hlt
 }`,
     exercise: {
+      expect: { regs: { eax: 45 } },
       prompt: 'Write code that computes 3 × (10 + 5) and leaves the final product in EAX. Use ADD for the sum and MUL for the product.',
       hint: 'ADD eax, 5 first (after setting EAX=10), then MOV ecx, 3 and MUL ecx.',
       solution: `section .text
@@ -214,6 +216,7 @@ int main(void) {
     return 0;                 // done: hlt
 }`,
     exercise: {
+      expect: { regs: { eax: 16 } },
       prompt: 'Write a loop that multiplies EAX by 2 exactly 4 times, starting from EAX=1. Use ADD eax, eax (doubling trick) inside the loop body.',
       hint: 'Set ECX=4 as the loop counter. Each iteration: ADD eax, eax. After the loop EAX should be 16.',
       solution: `section .text
@@ -279,6 +282,7 @@ int main(void) {
     return 0;                    // hlt
 }`,
     exercise: {
+      expect: { regs: { eax: 40 } },
       prompt: 'Add a second subroutine called "add_two" that takes two arguments and returns their sum in EAX. Call it with arguments 13 and 27. The result should be 40.',
       hint: 'Push the second argument first, then the first (right-to-left). Inside add_two: [EBP+8] is arg1, [EBP+12] is arg2.',
       solution: `section .text
@@ -397,6 +401,7 @@ int main(void) {
     return 0;                                   // hlt
 }`,
     exercise: {
+      expect: { regs: { eax: 256 } },
       prompt: 'Write a loop that computes 2^8 (2 to the power of 8) and stores the result in EAX. Start with EAX=1 and double it 8 times using ADD eax, eax inside a counted loop.',
       hint: 'Set ECX=8, EAX=1. Each iteration: ADD eax, eax. After the loop EAX should be 256.',
       solution: `section .text
@@ -485,6 +490,7 @@ int main(void) {
     _exit(0);                         // mov eax, 1 / mov ebx, 0 / int 0x80
 }`,
     exercise: {
+      expect: { exitCode: 42, stdoutNot: "Hello, World!" },
       prompt: 'Change the program to print your own message instead of "Hello, World!". Then exit with code 42 instead of 0. Watch the stdout panel and exit code update.',
       hint: 'Edit the string after db (keep the quotes and trailing 0x0A for the newline). Change MOV EBX, 0 to MOV EBX, 42 before sys_exit. Update msg_len if your string length changed — or let equ recompute it automatically.',
       solution: `section .data
@@ -609,6 +615,7 @@ int main(void) {
     return 0;                   // hlt
 }`,
     exercise: {
+      expect: { flags: { zf: 1 } },
       prompt: 'Add a second string "Hello" in .data and use REPE CMPSB to compare it against src. After the loop, check ZF: if strings are equal ZF=1. Watch the flags panel — ZF should be 1 this time.',
       hint: 'Declare: copy db \'Hello\', 0. Then MOV ESI, src / MOV EDI, copy / MOV ECX, 6 / REPE CMPSB. Equal strings leave ZF=1.',
       solution: `section .data
@@ -752,15 +759,16 @@ int main(void) {
     return 0;                          // hlt
 }`,
     exercise: {
-      prompt: 'Write code that packs two 4-bit values (nibbles) into one byte in EAX. Put the value 0xA into the high nibble and 0x5 into the low nibble. The result should be EAX = 0xA5. Use SHL to shift the first value, then OR to combine.',
-      hint: 'MOV eax, 0xA / SHL eax, 4 → EAX = 0xA0. Then OR eax, 0x5 → EAX = 0xA5.',
+      expect: { regs: { edx: 0xA5 } },
+      prompt: 'Write code that packs two 4-bit values (nibbles) into one byte in EDX. Put the value 0xA into the high nibble and 0x5 into the low nibble. The result should be EDX = 0xA5. Use SHL to shift the first value, then OR to combine. (Use EDX: the starter code already leaves 0xA5 in EAX by coincidence.)',
+      hint: 'MOV edx, 0xA / SHL edx, 4 → EDX = 0xA0. Then OR edx, 0x5 → EDX = 0xA5.',
       solution: `section .text
 global _start
 
 _start:
-    mov eax, 0xA
-    shl eax, 4
-    or eax, 0x5
+    mov edx, 0xA
+    shl edx, 4
+    or edx, 0x5
     hlt`,
     },
   },
@@ -864,6 +872,7 @@ int main(void) {
     return 0;                  // hlt
 }`,
     exercise: {
+      expect: { regs: { ebx: 50, ecx: "arr+16" } },
       prompt: 'Load arr[4] (value 50) into EBX using scaled-index addressing. Then use LEA to compute the address of arr[4] and store it in ECX. Verify by reading [ECX] — it should equal EBX.',
       hint: 'MOV esi, 4 / MOV ebx, [arr+esi*4] for the value. LEA ecx, [arr+esi*4] for the address. MOV eax, [ecx] — EAX should be 50.',
       solution: `section .data
@@ -1003,6 +1012,7 @@ int main(void) {
     return 0;                     // sign_done: hlt
 }`,
     exercise: {
+      expect: { regs: { eax: 33, edx: -1 } },
       prompt: 'Compute (-100) ÷ (-3) using CDQ and IDIV. What are the quotient (EAX) and remainder (EDX)? Hint: the mathematically correct answer has EAX = 33.',
       hint: 'MOV eax, -100 / CDQ / MOV ecx, -3 / IDIV ecx. Expected: EAX = 33, EDX = -1 (because 33 × (-3) = -99, and -100 − (-99) = -1).',
       solution: `section .text
@@ -1102,6 +1112,7 @@ int main(void) {
     return 0;                        // hlt
 }`,
     exercise: {
+      expect: { regs: { eax: 10 } },
       prompt: 'Write a "clamp(val, lo, hi)" function that returns val if lo ≤ val ≤ hi, lo if val < lo, or hi if val > hi. Call it with (25, 10, 20) — EAX should be 20. Then call it with (5, 10, 20) — EAX should be 10.',
       hint: '[EBP+8]=val, [EBP+12]=lo, [EBP+16]=hi. Load val into EAX. CMP eax, [ebp+12] / JGE check_hi. If below lo: MOV eax, [ebp+12] / JMP done. check_hi: CMP eax, [ebp+16] / JLE done. MOV eax, [ebp+16].',
       solution: `section .text
@@ -1258,6 +1269,7 @@ int main(void) {
     return 0;                              // hlt
 }`,
     exercise: {
+      expect: { regs: { edi: 3 } },
       prompt: 'After the existing loops, count how many elements are greater than 10 and store the count in EDI. Expected: 3 (the values 17, 42, and 11 are all greater than 10).',
       hint: 'XOR edi, edi / MOV esi, arr / MOV ecx, arrlen. Loop: MOV edx, [esi] / CMP edx, 10 / JLE skip / INC edi. skip: ADD esi, 4 / LOOP ...',
       solution: `Insert after the max-finding loop (after "loop max_loop") and before "; ── 4. Write to an array element" so arr is still 3,17,8,42,11:
@@ -1393,6 +1405,7 @@ int main(void) {
     return 0;                                   // hlt
 }`,
     exercise: {
+      answer: 0xCCBB, answerLabel: "AX =",
       prompt: 'Without running it, predict the value of EAX after this code:\n\n  mov dword [val], 0xAABBCCDD\n  mov al, [val+2]\n  mov ah, [val+1]\n\nThen run the program and check.',
       hint: 'Byte at val+2 = the byte stored two addresses past the start = 0xBB (third byte in memory order). Byte at val+1 = 0xCC. So AL = 0xBB, AH = 0xCC → AX = 0xCCBB.',
       solution: `Little-endian layout for dword 0xAABBCCDD at val:
@@ -1484,6 +1497,7 @@ int main(void) {
     return 0;                    // hlt
 }`,
     exercise: {
+      answer: 16, answerLabel: "p_len =",
       prompt: 'Change payload to 12 bytes ("AAAAAAAABBBB"). Step through and watch the stack panel: the BBBB lands exactly on the saved-EBP slot at [ebp+0]. What value would you need at p_len for the overflow to reach the saved return address — and how many bytes BEFORE the return-address bytes would have to be "padding" that you don\'t care about?',
       hint: 'buf is 8 bytes, saved EBP is 4 bytes, so the saved return address sits 12 bytes past the start of buf. To touch it you need p_len = 16. The first 8 bytes are padding (fill buf), the next 4 overwrite saved EBP (also padding), and bytes 13-16 are the address you want EIP to jump to — written little-endian, of course (see lesson 13).',
       solution: `Use p_len = 16 to write through buf (8 bytes) + saved EBP (4 bytes) + reach the saved return address (4 bytes).
@@ -1555,11 +1569,132 @@ int main(void) {
     return 0;                    // hlt
 }`,
     exercise: {
+      answer: 145, answerLabel: "EAX =",
       prompt: 'Without changing the blob, predict EAX after the three ADD instructions (sum of 0x0A + 0x1E + 0x2D + 0x3C in decimal or hex). Run to verify. Then name two mitigations from the Key Concepts list that complicate turning a buffer overwrite into executed machine bytes.',
       hint: '0x0A + 0x1E + 0x2D + 0x3C = 10 + 30 + 45 + 60 = 145 = 0x91. Mitigations: DEP/W^X and ASLR are the headline pair; stack canaries (lesson 14) also block naive overwrites.',
       solution: `Sum: 0x0A + 0x1E + 0x2D + 0x3C = 145 decimal = 0x91 hex (low byte of EAX after the three adds; upper bytes depend on prior xor eax,eax so EAX = 0x91).
 
 Two mitigations that complicate execute-from-overflow: DEP/W^X (non-executable data pages) and ASLR (unpredictable addresses). Stack canaries (lesson 14) also detect sequential overwrites before RET.`,
+    },
+  },
+  // ── Lesson 16 ─────────────────────────────────────────────────────────────────
+  {
+    id: 16,
+    title: 'x86-64 & the System V ABI',
+    intro: `Everything so far ran on the 32-bit machine. Modern Linux, macOS and almost every binary you will reverse are x86-64. The registers grow to 64 bits (RAX…RSP) and eight new ones appear (R8–R15). Function arguments travel in registers instead of on the stack (System V ABI: RDI, RSI, RDX, RCX, R8, R9), and system calls use the syscall instruction with new numbers. Put bits 64 at the top of a program and the simulator switches to 64-bit mode.`,
+    concepts: [
+      { name: 'bits 64', desc: 'Tells NASM (and this simulator) to assemble 64-bit code. The register table switches to 16 × 64-bit registers and stack slots become 8 bytes.' },
+      { name: 'RAX ⊃ EAX ⊃ AX ⊃ AL', desc: 'Same nesting as before, one level up. R8–R15 have views too: R8D (32), R8W (16), R8B (8).' },
+      { name: 'A 32-bit write zeroes the top half', desc: 'mov eax, 1 clears bits 32–63 of RAX. A 16- or 8-bit write (mov ax / mov al) leaves the other bits alone. Compilers rely on this: xor eax, eax zeroes all of RAX in 2 bytes.' },
+      { name: 'System V calling convention', desc: 'Integer arguments 1–6 go in RDI, RSI, RDX, RCX, R8, R9; the result comes back in RAX. RBX, RBP and R12–R15 are callee-saved: a function must restore them before ret.' },
+      { name: 'syscall', desc: 'RAX = number (write = 1, exit = 60, read = 0), arguments in RDI, RSI, RDX. Not int 0x80, and not the 32-bit numbers (write was 4, exit was 1).' },
+      { name: '[rel label]', desc: 'RIP-relative addressing: the address is encoded as an offset from the next instruction, so the code works wherever it is loaded (position-independent code).' },
+    ],
+    diagram: `
+  RAX  [63 ...................... 32 | 31 ........ 16 | 15 .. 8 | 7 .. 0 ]
+       |<----------------------- RAX (64) ---------------------------->|
+                                     |<---------- EAX (32) ----------->|
+                                                      |<--- AX (16) -->|
+                                                      |   AH    |  AL  |
+
+  mov rax, -1   →  FFFFFFFF FFFFFFFF
+  mov eax, 1    →  00000000 00000001   ← 32-bit write zeroes the top
+  mov ax, 2     →  (bits 16..63 kept)
+
+  System V AMD64 call: add3(10, 20, 12)
+  ─────────────────────────────────────
+  arg1 → RDI   arg2 → RSI   arg3 → RDX   arg4 → RCX   arg5 → R8   arg6 → R9
+  result ← RAX
+
+  32-bit vs 64-bit Linux system calls
+  ─────────────────────────────────────
+             int 0x80 (32)        syscall (64)
+  write      EAX=4  EBX,ECX,EDX   RAX=1   RDI,RSI,RDX
+  exit       EAX=1  EBX           RAX=60  RDI`,
+    code: `bits 64
+
+section .data
+    msg db 'Hi from x86-64', 10
+    len equ $ - msg
+
+section .text
+global _start
+
+; long add3(long a, long b, long c): System V passes a, b, c in RDI, RSI, RDX
+add3:
+    lea  rax, [rdi+rsi]     ; rax = a + b
+    add  rax, rdx           ; rax += c  (the result goes back in RAX)
+    ret
+
+_start:
+    ; ── 1. A 32-bit write zeroes the upper half ──────────
+    mov  rax, -1            ; RAX = 0xFFFFFFFFFFFFFFFF
+    mov  eax, 1             ; RAX = 0x0000000000000001  (bits 32-63 cleared!)
+    mov  rbx, -1
+    mov  bx, 2              ; 16-bit write keeps bits 16-63: RBX = 0xFFFFFFFFFFFF0002
+
+    ; ── 2. Call with the System V ABI ────────────────────
+    mov  rdi, 10            ; 1st argument
+    mov  rsi, 20            ; 2nd argument
+    mov  rdx, 12            ; 3rd argument
+    call add3               ; RAX = 42
+    mov  r12, rax           ; R12 is callee-saved: safe across later calls
+
+    ; ── 3. write(1, msg, len) with syscall ───────────────
+    mov  rax, 1             ; sys_write is 1 in 64-bit Linux (int 0x80 used 4)
+    mov  rdi, 1             ; fd = stdout
+    lea  rsi, [rel msg]     ; RIP-relative address of msg
+    mov  rdx, len
+    syscall
+
+    ; ── 4. exit(0) ───────────────────────────────────────
+    mov  rax, 60            ; sys_exit is 60 (int 0x80 used 1)
+    xor  edi, edi           ; exit code 0; a 32-bit xor clears all of RDI
+    syscall`,
+    c: `#include <unistd.h>
+
+const char msg[] = "Hi from x86-64\\n";      // section .data
+
+// System V AMD64: a, b, c arrive in RDI, RSI, RDX; the result leaves in RAX.
+long add3(long a, long b, long c) {
+    return a + b + c;                       // lea rax, [rdi+rsi] / add rax, rdx / ret
+}
+
+int main(void) {
+    unsigned long rax = -1;                 // mov rax, -1
+    rax = (unsigned int)1;                  // mov eax, 1  -> writing EAX zeroes bits 32-63
+    unsigned long rbx = -1;                 // mov rbx, -1
+    rbx = (rbx & ~0xFFFFul) | 2;            // mov bx, 2  -> a 16-bit write keeps the rest
+
+    long r12 = add3(10, 20, 12);            // mov rdi, 10 / mov rsi, 20 / mov rdx, 12 / call add3 / mov r12, rax
+
+    write(1, msg, sizeof msg - 1);          // mov rax, 1 / mov rdi, 1 / lea rsi, [rel msg] / mov rdx, len / syscall
+    _exit(0);                               // mov rax, 60 / xor edi, edi / syscall
+}`,
+    exercise: {
+      expect: { regs: { r12: 17 }, exitCode: 17 },
+      prompt: 'Write a function mul_add(a, b, c) that returns a × b + c, following the System V ABI (arguments in RDI, RSI, RDX; result in RAX). Call it with (3, 4, 5), keep the result in R12, and exit with it as the exit code. R12 and the exit code should both be 17.',
+      hint: 'mul_add: mov rax, rdi / imul rax, rsi / add rax, rdx / ret. After the call: mov r12, rax. To exit: mov rdi, r12 / mov rax, 60 / syscall.',
+      solution: `bits 64
+
+section .text
+global _start
+
+mul_add:
+    mov  rax, rdi
+    imul rax, rsi
+    add  rax, rdx
+    ret
+
+_start:
+    mov  rdi, 3
+    mov  rsi, 4
+    mov  rdx, 5
+    call mul_add
+    mov  r12, rax
+    mov  rdi, r12
+    mov  rax, 60
+    syscall`,
     },
   },
 ];

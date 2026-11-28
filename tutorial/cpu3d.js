@@ -52,6 +52,11 @@
     xchg: 'swap the two operands.',
     add: 'destination = destination + source. Sets ZF SF CF OF.',
     sub: 'destination = destination − source. Sets ZF SF CF OF.',
+    adc: 'destination = destination + source + CF (add with carry: the high half of a wide add).',
+    sbb: 'destination = destination − source − CF (subtract with borrow).',
+    leave: 'tear down the frame: ESP = EBP, then pop EBP.',
+    enter: 'build a frame: push EBP, EBP = ESP, ESP −= size.',
+    jecxz: 'jump if ECX = 0 (flags are not checked).',
     inc: 'add 1. Sets ZF SF OF, leaves CF alone.',
     dec: 'subtract 1. Sets ZF SF OF, leaves CF alone.',
     neg: 'two\'s-complement negate: 0 − destination.',
@@ -268,7 +273,7 @@
     // 1. Fetch + decode
     list.push({
       title: `Fetch · line ${line}`,
-      text: `${head}: ${DOC[op] || strDoc(op) || (JCC[op] ? `jump if ${JCC[op].map(f => f.toUpperCase()).join('/')} says so.` : 'execute.')}`,
+      text: `${head}: ${DOC[op] || strDoc(op) || (JCC[op] ? `jump if ${JCC[op].map(f => f.toUpperCase()).join('/')} says so.` : (/^set/.test(op) ? 'store 1 if the condition holds, else 0.' : /^cmov/.test(op) ? 'copy the source only if the condition holds.' : 'execute.'))}`,
       scene: S(from),
     });
 
@@ -458,10 +463,11 @@
     function update(run, s, animate) {
       stop();
       const last = run ? run.history.length - 1 : -1;
-      if (!run || s < 0) {
+      if (!run || s < 0 || run.mode === 64) {
         cur = null;
         paint(scene({ ...blank, regs: { ...blank.regs, esp: STACK_TOP }, flags: {} }, ctx0));
-        card('', 'Ready', 'Press <b>Step ▶</b>. Each step replays the instruction that just ran: fetch, read, execute, write back.');
+        if (run?.mode === 64) card('', '32-bit only', 'The 3D CPU draws the 32-bit machine. This program says <code>bits 64</code>: follow it in the register table.');
+        else card('', 'Ready', 'Press <b>Step ▶</b>. Each step replays the instruction that just ran: fetch, read, execute, write back.');
         dots(0); $('.cpu3d-replay').disabled = true;
         return;
       }

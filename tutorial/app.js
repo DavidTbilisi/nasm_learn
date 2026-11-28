@@ -15,6 +15,7 @@ const btnReset     = document.getElementById('btn-reset');
 const regTable     = document.getElementById('reg-table');
 const flagBar      = document.getElementById('flag-bar');
 const stackPanel   = document.getElementById('stack-panel');
+const memPanel     = document.getElementById('mem-panel');
 const outputPanel  = document.getElementById('output-panel');
 const stepLog      = document.getElementById('step-log');
 const lessonTitle  = document.getElementById('lesson-title');
@@ -28,6 +29,10 @@ const hintBtn      = document.getElementById('hint-btn');
 const solutionBox  = document.getElementById('solution-box');
 const solutionBtn  = document.getElementById('solution-btn');
 const tabBtns      = document.querySelectorAll('.tab-btn');
+const checkBtn     = document.getElementById('check-btn');
+const answerWrap   = document.getElementById('answer-wrap');
+const answerInput  = document.getElementById('answer-input');
+const exResult     = document.getElementById('exercise-result');
 const stepCounter  = document.getElementById('step-counter');
 
 // ── ASM / C view toggle ───────────────────────────────────────────────────────
@@ -66,18 +71,26 @@ const errorBanner  = document.getElementById('error-banner');
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
-function hex(n) { return '0x' + (n >>> 0).toString(16).toUpperCase().padStart(8,'0'); }
+function hex(n, digits = 8) { return '0x' + BigInt.asUintN(digits * 4, BigInt(n)).toString(16).toUpperCase().padStart(digits, '0'); }
 function hexShort(n) { return '0x' + (n >>> 0).toString(16).toUpperCase(); }
 
-function renderRegs(state, prevState) {
-  const REG_NAMES = ['eax','ebx','ecx','edx','esi','edi','esp','ebp'];
-  regTable.innerHTML = REG_NAMES.map(r => {
+// Fresh machine state for this source: 16 x 64-bit registers under `bits 64`, else 8 x 32-bit.
+function blankState(code) {
+  const s = NASMSimulator.create(code);
+  return { regs: { ...s.regs }, flags: { ...s.flags }, mem: {}, stdout: [], exitCode: null };
+}
+
+// Register table, shared with the Playground. 64-bit runs hold BigInt registers.
+function renderRegs(el, state, prevState) {
+  const wide = 'rax' in state.regs;
+  const names = wide ? NASMSimulator64.GPR : NASMSimulator.REG32;
+  el.innerHTML = names.map(r => {
     const val = state.regs[r];
     const changed = prevState && prevState.regs[r] !== val;
     return `<tr class="${changed ? 'changed' : ''}">
       <td class="reg-name">${r.toUpperCase()}</td>
-      <td class="reg-hex">${hex(val)}</td>
-      <td class="reg-dec">${val >>> 0}</td>
+      <td class="reg-hex">${hex(val, wide ? 16 : 8)}</td>
+      <td class="reg-dec">${val}</td>
     </tr>`;
   }).join('');
 }
@@ -92,39 +105,83 @@ function renderFlags(state, prevState) {
   }).join('');
 }
 
-function renderStack(state) {
-  const stackEntries = [];
-  for (let a = 0x2000 - 4; a >= state.regs.esp && a >= 0; a -= 4) {
-    const v = (state.mem[a]??0) | ((state.mem[a+1]??0)<<8) |
-              ((state.mem[a+2]??0)<<16) | ((state.mem[a+3]??0)<<24);
-    if (v !== 0 || a === state.regs.esp) stackEntries.push([a, v>>>0]);
+// Stack window, shared with the Playground: 4-byte slots, or 8-byte slots in 64-bit mode.
+function renderStack(el, state) {
+  const wide = 'rsp' in state.regs, w = wide ? 8 : 4;
+  const sp = Number(wide ? state.regs.rsp : state.regs.esp), bp = Number(wide ? state.regs.rbp : state.regs.ebp);
+  const entries = [];
+  for (let a = 0x2000 - w; a >= sp && a >= 0; a -= w) {
+    let v = 0n;
+    for (let i = w - 1; i >= 0; i--) v = (v << 8n) | BigInt(state.mem[a + i] ?? 0);
+    if (v !== 0n || a === sp) entries.push([a, v]);
   }
-
-  let html = '';
-
-  if (!stackEntries.length) {
-    html += '<span class="empty-note">Stack is empty</span>';
-  } else {
-    html += stackEntries.map(([addr, val]) => {
-      const isEsp = addr === state.regs.esp;
-      const isEbp = addr === state.regs.ebp;
-      const label = isEsp ? ' ← ESP' : (isEbp ? ' ← EBP' : '');
-      return `<div class="stack-row${isEsp ? ' stack-top' : ''}">
+  el.innerHTML = !entries.length ? '<span class="empty-note">Stack is empty</span>' : entries.map(([addr, val]) => {
+    const label = addr === sp ? (wide ? ' ← RSP' : ' ← ESP') : addr === bp ? (wide ? ' ← RBP' : ' ← EBP') : '';
+    return `<div class="stack-row${addr === sp ? ' stack-top' : ''}">
         <span class="stack-addr">${hexShort(addr)}</span>
-        <span class="stack-val">${hex(val)}</span>
+        <span class="stack-val">${hex(val, w * 2)}</span>
         <span class="stack-label">${label}</span>
       </div>`;
-    }).join('');
-  }
-
-  stackPanel.innerHTML = html;
+  }).join('');
 }
 
 function renderState(state, prevState) {
-  renderRegs(state, prevState);
+  renderRegs(regTable, state, prevState);
   renderFlags(state, prevState);
-  renderStack(state);
+  renderStack(stackPanel, state);
+  renderMemory(memPanel, state, prevState, runResult?.dataLabels);
   renderOutput(outputPanel, state);
+}
+
+// Memory window: hex + ASCII dump of .data/.bss, 8 bytes a row, bytes the last step
+// changed highlighted. Shared with the Playground.
+function renderMemory(el, state, prev, dataLabels = {}) {
+  const base = NASMSimulator.DATA_BASE;
+  const addrs = Object.keys(state.mem).map(Number).filter(a => a >= base);
+  if (!addrs.length) {
+    el.innerHTML = '<span class="empty-note">No .data / .bss bytes yet. Declare some data, then Run or Step.</span>';
+    return;
+  }
+  const end = Math.min(Math.max(...addrs) + 1, base + 512);  // shortcut: first 512 bytes only, raise if lessons outgrow it
+  const names = {};
+  for (const [n, a] of Object.entries(dataLabels)) (names[a & ~7] ??= []).push(n);
+  const esc = c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] ?? c);
+  let html = '';
+  for (let row = base; row < end; row += 8) {
+    let bytes = '', ascii = '';
+    for (let a = row; a < row + 8; a++) {
+      const b = state.mem[a] ?? 0;
+      const changed = prev && (prev.mem[a] ?? 0) !== b ? ' changed' : '';
+      bytes += `<span class="mem-byte${changed}">${b.toString(16).toUpperCase().padStart(2, '0')}</span>`;
+      ascii += b >= 0x20 && b < 0x7f ? esc(String.fromCharCode(b)) : '·';
+    }
+    html += `<div class="mem-row"><span class="mem-addr">${hexShort(row)}</span>${bytes}` +
+            `<span class="mem-ascii">${ascii}</span><span class="mem-label">${(names[row] ?? []).join(' ')}</span></div>`;
+  }
+  el.innerHTML = html;
+}
+
+// Breakpoints: click the gutter left of the line numbers. Run stops *before* a marked
+// line executes; Run again continues to the next one. Shared with the Playground.
+function enableBreakpoints(editor) {
+  editor.setOption('gutters', ['cm-breakpoints', 'CodeMirror-linenumbers']);
+  editor.on('gutterClick', (ed, line) => {
+    let mark = null;
+    if (!ed.lineInfo(line).gutterMarkers?.['cm-breakpoints']) {
+      mark = document.createElement('span');
+      mark.className = 'bp-marker';
+      mark.textContent = '●';
+    }
+    ed.setGutterMarker(line, 'cm-breakpoints', mark);
+  });
+}
+
+// First history index after `from` whose instruction sits on a breakpoint line, else -1.
+function nextBreakpoint(editor, run, from) {
+  for (let i = from + 1; i < run.history.length; i++) {
+    if (editor.lineInfo(run.history[i].instr.line)?.gutterMarkers?.['cm-breakpoints']) return i;
+  }
+  return -1;
 }
 
 // Output window: everything the program wrote, joined the way a terminal shows it
@@ -226,24 +283,29 @@ function doReset() {
   clearLog();
   clearStepHighlight();
   stepCounter.textContent = '';
-  const blank = {
-    regs:  { eax:0,ebx:0,ecx:0,edx:0,esi:0,edi:0,esp:0x2000,ebp:0x2000 },
-    flags: { zf:0, cf:0, sf:0, of:0, df:0 },
-    mem:   {}, stdout: [], exitCode: null,
-  };
-  renderState(blank, null);
+  renderState(blankState(cm.getValue()), null);
   cpu3d.update(null, -1, false);
   btnPrev.disabled = true;
   btnStep.textContent = 'Step ▶';
 }
 
 function doRun() {
-  hideError();
+  // Mid-run (stepping or paused at a breakpoint), Run continues from the current step.
+  if (!runResult || stepIndex >= runResult.history.length - 1) {
+    hideError();
+    clearLog();
+    runResult = NASMSimulator.create(cm.getValue()).runAll(cm.getValue());
+    stepIndex = -1;
+    if (runResult.error) { showError(runResult.error); runResult = null; return; }
+    if (!runResult.history.length) { appendLog('No instructions executed.', 'log-warn'); runResult = null; return; }
+  }
+  const bp = nextBreakpoint(cm, runResult, stepIndex);
+  if (bp >= 0) {
+    gotoStep(bp);
+    appendLog(`● breakpoint, line ${runResult.history[bp].instr.line + 1}. Run again to continue.`, 'log-info');
+    return;
+  }
   clearLog();
-  runResult = sim.runAll(cm.getValue());
-
-  if (runResult.error) { showError(runResult.error); return; }
-  if (!runResult.history.length) { appendLog('No instructions executed.', 'log-warn'); return; }
   if (runResult.hitLimit) appendLog('⚠ Execution stopped: step limit reached (possible infinite loop).', 'log-warn');
 
   const lastStep = runResult.history[runResult.history.length - 1];
@@ -265,7 +327,7 @@ function doStep() {
   if (!runResult || stepIndex >= runResult.history.length - 1) {
     hideError();
     clearLog();
-    runResult = sim.runAll(cm.getValue());
+    runResult = NASMSimulator.create(cm.getValue()).runAll(cm.getValue());
     if (runResult.error) { showError(runResult.error); runResult = null; return; }
     if (!runResult.history.length) { appendLog('No instructions.', 'log-warn'); return; }
     stepIndex = 0;
@@ -299,7 +361,12 @@ function doStep() {
 
 function doPrev() {
   if (!runResult || stepIndex <= 0) return;
-  stepIndex--;
+  gotoStep(stepIndex - 1);
+}
+
+// Show the state just before history[i] runs, with its line highlighted and the log rebuilt.
+function gotoStep(i) {
+  stepIndex = i;
   const entry    = runResult.history[stepIndex];
   const prevEntry= stepIndex > 0 ? runResult.history[stepIndex-1] : null;
   renderState(entry.before, prevEntry ? prevEntry.before : null);
@@ -324,6 +391,7 @@ btnStep.addEventListener('click', () => {
 });
 btnPrev.addEventListener('click', doPrev);
 btnReset.addEventListener('click', doReset);
+enableBreakpoints(cm);
 
 cm.on('change', () => {
   runResult = null; stepIndex = -1;
@@ -331,6 +399,37 @@ cm.on('change', () => {
   stepCounter.textContent = '';
   btnStep.textContent = 'Step ▶';
 });
+
+// ── Progress: passed exercises + last lesson opened ──────────────────────────
+const PROGRESS_KEY = 'nasm-progress';
+const progress = (() => {
+  try { const p = JSON.parse(localStorage.getItem(PROGRESS_KEY)); if (p && Array.isArray(p.done)) return p; } catch (_) {}
+  return { done: [], last: 0 };
+})();
+function saveProgress() { try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch (_) {} }
+function renderProgress() {
+  LESSONS.forEach((l, i) => tabBtns[i]?.classList.toggle('done', progress.done.includes(l.id)));
+}
+
+function showResult(res) {
+  exResult.hidden = false;
+  exResult.className = res.pass ? 'pass' : 'fail';
+  exResult.textContent = (res.pass ? '✓ Passed. ' : '✗ ') + res.msg;
+}
+
+checkBtn.addEventListener('click', () => {
+  const lesson = LESSONS[currentLesson];
+  const res = gradeExercise(lesson.exercise, { code: cm.getValue(), answer: answerInput.value });
+  if (!res) return;
+  showResult(res);
+  if (res.pass && !progress.done.includes(lesson.id)) {
+    progress.done.push(lesson.id);
+    saveProgress();
+    renderProgress();
+    lessonTitle.querySelector('.lesson-progress').textContent = `${progress.done.length}/${LESSONS.length} done`;
+  }
+});
+answerInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkBtn.click(); });
 
 // ── Lesson rendering ──────────────────────────────────────────────────────────
 
@@ -340,7 +439,10 @@ function loadLesson(idx) {
 
   tabBtns.forEach((b,i) => b.classList.toggle('active', i === idx));
 
-  lessonTitle.innerHTML = `<span class="lesson-num">${lesson.id}</span> ${lesson.title}`;
+  lessonTitle.innerHTML = `<span class="lesson-num">${lesson.id}</span> ${lesson.title}` +
+    ` <span class="lesson-progress">${progress.done.length}/${LESSONS.length} done</span>`;
+  progress.last = idx;
+  saveProgress();
   lessonIntro.textContent = lesson.intro;
 
   conceptsList.innerHTML = lesson.concepts.map(c =>
@@ -363,6 +465,12 @@ function loadLesson(idx) {
 
   exerciseBox.textContent = lesson.exercise.prompt;
   hintBox.textContent     = lesson.exercise.hint;
+  const ex = lesson.exercise;
+  answerWrap.hidden = ex.answer === undefined;
+  document.getElementById('answer-label').textContent = ex.answerLabel ?? 'Answer:';
+  answerInput.value = '';
+  exResult.hidden = true;
+  checkBtn.disabled = !ex.expect && ex.answer === undefined;
   hintBox.style.display   = 'none';
   hintBtn.textContent     = 'Show hint';
 
@@ -450,9 +558,9 @@ tabBtns.forEach((btn, i) => {
   });
 });
 
-/** Jump to a main lesson tab (0–14) from Rank recommendations. */
+/** Jump to a main lesson tab (0-based) from Rank recommendations. */
 window.goToLessonTab = lessonIdx => {
-  if (lessonIdx < 0 || lessonIdx > 14) return;
+  if (lessonIdx < 0 || lessonIdx >= LESSONS.length) return;
   window.hideRank?.();
   window.hideGym?.();
   window.hideQuiz?.();
@@ -602,5 +710,6 @@ function setupEndianWidget() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-loadLesson(0);
+renderProgress();
+loadLesson(Math.min(Math.max(progress.last | 0, 0), LESSONS.length - 1));
 doReset();

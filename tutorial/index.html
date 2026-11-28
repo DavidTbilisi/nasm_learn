@@ -32,6 +32,7 @@
     <button class="tab-btn">13 · Endianness</button>
     <button class="tab-btn">14 · Buffer Overflow</button>
     <button class="tab-btn">15 · Shellcode</button>
+    <button class="tab-btn">16 · x86-64</button>
     <button class="tab-btn quiz-tab">✎ Quiz</button>
     <button class="tab-btn gym-tab">🏋 Gym</button>
     <button class="tab-btn playground-tab">▷ Playground</button>
@@ -63,9 +64,12 @@
       <div class="section-label">Exercise</div>
       <p id="exercise-box"></p>
       <div class="exercise-actions">
+        <label id="answer-wrap" hidden><span id="answer-label"></span> <input id="answer-input" type="text" autocomplete="off" spellcheck="false"></label>
+        <button id="check-btn" type="button">Check ✓</button>
         <button id="hint-btn" type="button">Show hint</button>
         <button id="solution-btn" type="button">Show solution</button>
       </div>
+      <p id="exercise-result" role="status" hidden></p>
       <p id="hint-box" style="display:none"></p>
       <pre id="solution-box" class="solution-box" style="display:none"></pre>
     </div>
@@ -124,6 +128,8 @@
         <div id="flag-bar"></div>
         <div class="state-header">Stack</div>
         <div class="state-scroll" id="stack-panel"></div>
+        <div class="state-header">Memory · .data / .bss</div>
+        <div class="state-scroll mem-panel" id="mem-panel"></div>
       </div>
 
       <!-- ④ Drag handle — flags column width -->
@@ -210,6 +216,8 @@
       <div id="pg-flag-bar"></div>
       <div class="state-header">Stack</div>
       <div class="state-scroll" id="pg-stack-panel"></div>
+      <div class="state-header">Memory · .data / .bss</div>
+      <div class="state-scroll mem-panel" id="pg-mem-panel"></div>
     </div>
   </div>
 
@@ -379,7 +387,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
 <script src="simulator.js"></script>
+<script src="simulator64.js"></script>
 <script src="lessons.js"></script>
+<script src="grade.js"></script>
 <script src="nasm-mode.js"></script>
 <script src="explainer.js"></script>
 <script src="cpu3d.js"></script>
