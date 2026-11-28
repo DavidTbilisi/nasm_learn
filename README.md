@@ -11,6 +11,8 @@ An interactive x86 assembly learning environment that runs entirely in the brows
 
 ---
 
+![Setting a breakpoint and stepping through lesson 9](screenshots/breakpoint-demo.gif)
+
 ![Retro lesson view](screenshots/retro-lesson.png)
 
 *Phosphor-green retro terminal — guided lesson with live register/flag/stack state*

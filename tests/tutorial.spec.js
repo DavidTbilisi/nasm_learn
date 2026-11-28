@@ -21,7 +21,7 @@ async function runCode(page) {
 test.describe('Page basics', () => {
   test('has correct title', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle('NASM Interactive Tutorial');
+    await expect(page).toHaveTitle('Learn x86 Assembly in Your Browser · NASM Interactive Tutorial');
   });
 
   test('lesson 1 tab is active on load', async ({ page }) => {
